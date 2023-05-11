@@ -8,3 +8,5 @@ export JXE_APIKEY=SAMPLE_JXE_APIKEY
 export GCLOUD_PROJECT=$PROJECT_ID
 export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
 export BUCKET_NAME=${PROJECT_ID}-sample-data
+export SA_NAME=illumina-script-sa
+export SA_EMAIL=${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
