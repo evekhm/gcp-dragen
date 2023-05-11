@@ -64,3 +64,30 @@ gsutil hmac list
 #  service_account_email = google_service_account.service_account.email
 #}
 #```
+
+echo "Service Account to execute batch Job"
+gcloud services enable cloudresourcemanager.googleapis.com
+
+# TODO Fine Grain Create Role
+# # Create new Role
+  ##compute.instances.create
+  ##compute.instances.get
+
+gcloud iam service-accounts create $SA_NAME \
+        --description="Service Account to execute batch Job" \
+        --display-name=$SA_NAME
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:${SA_EMAIL}" \
+        --role="roles/compute.serviceAgent"
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${SA_EMAIL}" \
+         --role="roles/compute.admin"
+
+
+
+
+
+#export KEY=${PROJECT_ID}_${SA_NAME}.json
+#gcloud iam service-accounts keys create ${KEY}  --iam-account=${SA_EMAIL}
+
+

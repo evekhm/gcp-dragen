@@ -5,7 +5,7 @@ source "${DIR}"/SET
 gcloud config set project $PROJECT_ID
 
 date_str=$(date +%s )
-./jarvice-dragen-stub.sh-v1.1 --\
+./jarvice-dragen-stub.sh-v1.2 --\
  -f \
   -1 s3://"${BUCKET_NAME}"/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora \
   -2 s3://"${BUCKET_NAME}"/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora \
@@ -32,7 +32,7 @@ date_str=$(date +%s )
 --repeat-genotype-enable true \
 --repeat-genotype-use-catalog expanded \
 --output-file-prefix HG002_pure \
---output-directory s3://"${BUCKET_NAME}"/$date_str/output \
+--output-directory s3://"${BUCKET_NAME}"/output \
 --intermediate-results-dir /tmp/whole_genome/temp \
 --logging-to-output-dir true \
 --syslogging-to-output-dir true \
