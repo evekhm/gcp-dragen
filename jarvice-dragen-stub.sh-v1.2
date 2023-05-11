@@ -216,9 +216,9 @@ jobname="job-dragen"
 
 version="dev"
 
-gcloud beta batch jobs submit $jobname --location $GCP_ZONE --config - <<EOD
+gcloud beta batch jobs submit $jobname --location $GCLOUD_ZONE --config - <<EOD
 {
-  "name": "projects/$GCP_PROJECT/locations/$GCP_ZONE/jobs/$jobname",
+  "name": "projects/$GCP_PROJECT/locations/$GCLOUD_ZONE/jobs/$jobname",
   "taskGroups": [
     {
       "taskCount": "1",
