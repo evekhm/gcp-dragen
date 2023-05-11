@@ -65,13 +65,13 @@ EOF
     exit 1
 fi
 
-#FLOCK=$(type -p flock)
-#if [ -z "$FLOCK" ]; then
-#    cat <<EOF
-#Could not find 'flock' in PATH. It may not be installed.
-#EOF
-#    exit 1
-#fi
+FLOCK=$(type -p flock)
+if [ -z "$FLOCK" ]; then
+    cat <<EOF
+Could not find 'flock' in PATH. It may not be installed.
+EOF
+    exit 1
+fi
 
 LOCK_FILE="$HOME/.gcloud.lock"
 
@@ -163,7 +163,7 @@ echo "Using GCLOUD_PROJECT=[$GCLOUD_PROJECT], GCLOUD_NETWORK=[$GCLOUD_NETWORK], 
 
 [ -z "$JXE_APP" ] && echo 'DRAGEN application name required' && usage && exit 1
 
-exit
+
 tmp_file=$(mktemp "${GCLOUD_INSTANCE}-XXXX")
 GCLOUD_INSTANCE="$(echo $tmp_file | awk '{print tolower($0)}')"
 rm -rf $tmp_file
