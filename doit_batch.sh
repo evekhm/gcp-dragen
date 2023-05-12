@@ -38,5 +38,5 @@ date_str=$(date +%s )
 --intermediate-results-dir /tmp/whole_genome/temp \
 --logging-to-output-dir true \
 --syslogging-to-output-dir true \
---machine $GCLOUD_MACHINE
+--machine $GCLOUD_MACHINE \
 --lic-server https://ILLUMNIA_LIC@license.edicogenome.com

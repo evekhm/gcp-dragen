@@ -107,7 +107,7 @@ echo "$dragen_cmd"
 
 version="dev"
 
-JOB_NAME_UID=${JOB_NAME}_${date_str}
+JOB_NAME_UID=${JOB_NAME}-${date_str}
 echo "Submitting $JOB_NAME_UID"
 gcloud beta batch jobs submit "$JOB_NAME_UID" --network="projects/$PROJECT_ID/global/networks/$GCLOUD_NETWORK" --subnetwork="projects/$PROJECT_ID/regions/${GCLOUD_REGION}/subnetworks/$GCLOUD_SUBNET" --config - <<EOD
 {
