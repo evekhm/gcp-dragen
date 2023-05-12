@@ -1,18 +1,5 @@
 #!/bin/bash
 #set -e
-#GCLOUD_PROJECT=
-GCLOUD_IMAGE=atos-illumina-jxe-stub-rc
-GCLOUD_IMAGE_PROJECT=atos-illumina-public
-GCLOUD_MACHINE=n1-standard-1
-GCLOUD_ZONE=us-central1-a
-#GCLOUD_NETWORK=
-#GCLOUD_SUBNET=
-GCLOUD_INSTANCE=dragen
-#JXE_USERNAME=
-#JXE_APIKEY=
-#JXE_APP=
-#S3_ACCESS_KEY=
-#S3_SECRET_KEY=
 UNKNOWN_ARGS=""
 
 date_str=$(date +%s )
@@ -66,77 +53,11 @@ EOF
     exit 1
 fi
 
-FLOCK=$(type -p flock)
-if [ -z "$FLOCK" ]; then
-    cat <<EOF
-Could not find 'flock' in PATH. It may not be installed.
-EOF
-    exit 1
-fi
-
-LOCK_FILE="$HOME/.gcloud.lock"
-
 while [ $# -gt 0 ]; do
     case $1 in
         --help)
             usage
 	    exit 0
-	    ;;
-        --project)
-            GCLOUD_PROJECT=$2
-	    shift; shift
-	    ;;
-	--image)
-            GCLOUD_IMAGE=$2
-	    shift; shift
-	    ;;
-	--image-project)
-	    GCLOUD_IMAGE_PROJECT=$2
-	    shift; shift
-	    ;;
-        --machine)
-	    GCLOUD_MACHINE=$2
-	    shift; shift
-	    ;;
-	--zone)
-            GCLOUD_ZONE=$2
-	    shift; shift
-	    ;;
-	--network)
-	    GCLOUD_NETWORK=$2
-	    shift; shift
-	    ;;
-	--subnet)
-	    GCLOUD_SUBNET=$2
-	    shift; shift
-	    ;;
-	--instance-name)
-            GCLOUD_INSTANCE=$2
-	    shift; shift
-	    ;;
-	--username)
-	    JXE_USERNAME=$2
-	    shift; shift
-	    ;;
-	--apikey)
-            JXE_APIKEY=$2
-	    shift; shift
-	    ;;
-	--s3-access-key)
-            S3_ACCESS_KEY=$2
-	    shift; shift
-	    ;;
-	--s3-secret-key)
-	    S3_SECRET_KEY=$2
-	    shift; shift
-	    ;;
-	--dragen-app)
-            JXE_APP=$2
-	    shift; shift;
-	    ;;
-	--)
-            shift;
-	    break;
 	    ;;
         *)
 	    UNKNOWN_ARGS="$UNKNOWN_ARGS $1 $2"
@@ -165,39 +86,6 @@ echo "Using GCLOUD_PROJECT=[$GCLOUD_PROJECT], GCLOUD_NETWORK=[$GCLOUD_NETWORK], 
 [ -z "$JXE_APP" ] && echo 'DRAGEN application name required' && usage && exit 1
 
 
-tmp_file=$(mktemp "${GCLOUD_INSTANCE}-XXXX")
-GCLOUD_INSTANCE="$(echo $tmp_file | awk '{print tolower($0)}')"
-rm -rf $tmp_file
-
-$FLOCK "$LOCK_FILE" $GCLOUD compute instances create "$GCLOUD_INSTANCE" \
-    --project "$GCLOUD_PROJECT" \
-    --image "$GCLOUD_IMAGE" \
-    --image-project "$GCLOUD_IMAGE_PROJECT" \
-    --machine-type "$GCLOUD_MACHINE" \
-    --zone "$GCLOUD_ZONE" \
-    --network "$GCLOUD_NETWORK" \
-    --subnet "$GCLOUD_SUBNET"
-
-function cleanup_gcp() {
-    echo "Cleanup Google VM"
-    $FLOCK "$LOCK_FILE" $GCLOUD compute instances delete -q \
-        --project "$1" \
-        --zone "$2" \
-        "$3"
-    exit
-}
-trap "cleanup_gcp ${GCLOUD_PROJECT} ${GCLOUD_ZONE} ${GCLOUD_INSTANCE}" EXIT
-# wait for ssh to come up
-IP=$($FLOCK "$LOCK_FILE" $GCLOUD --project "$GCLOUD_PROJECT" compute instances list \
-    --filter "name=${GCLOUD_INSTANCE}" \
-    --format="table(
-        networkInterfaces[].accessConfigs[0].natIP.notnull().list():label=
-	)" 2>/dev/null)
-echo "Waiting for ssh to come up. Ctrl+C to abort"
-while ! 2> /dev/null > /dev/tcp/$IP/22; do
-    sleep 15
-done
-
 S3_ARGS=""
 [ -n "$S3_ACCESS_KEY" ] && S3_ARGS="--s3-access-key $S3_ACCESS_KEY "
 [ -n "$S3_SECRET_KEY" ] && S3_ARGS="$S3_ARGS --s3-secret-key $S3_SECRET_KEY "
@@ -206,19 +94,24 @@ UNKNOWN_ARGS=($UNKNOWN_ARGS)
 
 dragen_cmd="jarvice-dragen-stub.sh \
     --project "$GCLOUD_PROJECT" \
-    --zone "$GCLOUD_ZONE" \
-    ubuntu@${GCLOUD_INSTANCE} -- \
-    /opt/JARVICE/bin/jarvice-dragen-client \
-    --username $JXE_USERNAME --apikey $JXE_APIKEY --dragen-app $JXE_APP \
-    ${UNKNOWN_ARGS[@]} -- $S3_ARGS $*"
+    --network $GCLOUD_NETWORK \
+    --subnet $GCLOUD_SUBNET \
+    --username $JXE_USERNAME \
+    --apikey $JXE_APIKEY \
+    --dragen-app $JXE_APP \
+    ${UNKNOWN_ARGS[@]} -- $*"
 
-jobname="job-dragen"
+
+echo "$dragen_cmd"
+
 
 version="dev"
 
-gcloud beta batch jobs submit $jobname --location $GCLOUD_ZONE --config - <<EOD
+JOB_NAME_UID=${JOB_NAME}_${date_str}
+echo "Submitting $JOB_NAME_UID"
+gcloud beta batch jobs submit "$JOB_NAME_UID" --network="projects/$PROJECT_ID/global/networks/$GCLOUD_NETWORK" --subnetwork="projects/$PROJECT_ID/regions/${GCLOUD_REGION}/subnetworks/$GCLOUD_SUBNET" --config - <<EOD
 {
-  "name": "projects/$GCP_PROJECT/locations/$GCLOUD_ZONE/jobs/$jobname",
+  "name": "$JOB_NAME_UID",
   "taskGroups": [
     {
       "taskCount": "1",
@@ -250,7 +143,7 @@ gcloud beta batch jobs submit $jobname --location $GCLOUD_ZONE --config - <<EOD
       {
         "policy": {
           "provisioningModel": "STANDARD",
-          "machineType": "n1-standard-1"
+          "machineType": "${GCLOUD_MACHINE}"
         }
       }
     ]
@@ -260,3 +153,9 @@ gcloud beta batch jobs submit $jobname --location $GCLOUD_ZONE --config - <<EOD
   }
 }
 EOD
+
+echo "Commands to manage the jobs:"
+echo "gcloud beta batch jobs describe $JOB_NAME_UID"
+echo "gcloud beta batch jobs delete $JOB_NAME_UID"
+echo "gcloud beta batch jobs list"
+

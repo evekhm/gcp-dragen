@@ -4,9 +4,12 @@ gcloud config set project $PROJECT_ID
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${DIR}"/SET
 
-echo "Setting Org Policies..."
-gcloud services enable orgpolicy.googleapis.com
+# Enable APIs
+gcloud services enable batch.googleapis.com compute.googleapis.com logging.googleapis.com # For batch Job
+gcloud services enable cloudresourcemanager.googleapis.com # To grant roles to SA
+gcloud services enable orgpolicy.googleapis.com # To modify Org Policies
 
+echo "Setting Org Policies..."
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
 gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID
 gcloud org-policies reset constraints/compute.requireShieldedVm --project=$PROJECT_ID
@@ -14,6 +17,7 @@ gcloud org-policies reset constraints/storage.restrictAuthTypes --project=$PROJE
 
 gcloud resource-manager org-policies describe    compute.trustedImageProjects --project=$PROJECT_ID    --effective > policy.yaml
 echo "  - projects/illumina-dragen" >> policy.yaml
+echo "  - projects/batch-custom-image" >> policy.yaml
 gcloud resource-manager org-policies set-policy \
    policy.yaml --project=$PROJECT_ID
 
@@ -82,7 +86,6 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
 gcloud projects add-iam-policy-binding $PROJECT_ID \
          --member="serviceAccount:${SA_EMAIL}" \
          --role="roles/compute.admin"
-
 
 
 

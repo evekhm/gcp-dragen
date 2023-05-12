@@ -7,11 +7,13 @@ gcloud config set project $PROJECT_ID
 date_str=$(date +%s )
 ./jarvice-dragen-stub.sh-v1.2 --\
  -f \
-  -1 s3://"${BUCKET_NAME}"/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora \
-  -2 s3://"${BUCKET_NAME}"/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora \
---RGID HG002 \
---RGSM HG002 \
---ora-reference s3://"${BUCKET_NAME}"/references/lenadata -r s3://"${BUCKET_NAME}"/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1 \
+  --s3-access-key "$S3_ACCESS_KEY" \
+  --s3-secret-key "$S3_SECRET_KEY" \
+  -1 "$ILLUMINA_INPUT1" \
+  -2 "$ILLUMINA_INPUT2" \
+  --RGID HG002 \
+  --RGSM HG002 \
+  --ora-reference "$ILLUMINA_ORA_REF" -r "$ILLUMINA_R" \
 --enable-map-align true \
 --enable-map-align-output true \
 --enable-duplicate-marking true \
@@ -32,8 +34,9 @@ date_str=$(date +%s )
 --repeat-genotype-enable true \
 --repeat-genotype-use-catalog expanded \
 --output-file-prefix HG002_pure \
---output-directory s3://"${BUCKET_NAME}"/output \
+--output-directory s3://"${BUCKET_NAME}"/output/"${date_str}" \
 --intermediate-results-dir /tmp/whole_genome/temp \
 --logging-to-output-dir true \
 --syslogging-to-output-dir true \
+--machine $GCLOUD_MACHINE
 --lic-server https://ILLUMNIA_LIC@license.edicogenome.com
