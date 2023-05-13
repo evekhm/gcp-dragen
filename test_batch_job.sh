@@ -34,6 +34,9 @@ gcloud beta batch jobs submit "$JOB_NAME_UID" --network="projects/$PROJECT_ID/gl
         }
     ],
     "allocationPolicy": {
+      "serviceAccount": {
+          "email": "${SA_JOB_EMAIL}"
+      },
       "instances": [
         {
           "policy": {

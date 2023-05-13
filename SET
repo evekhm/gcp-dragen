@@ -7,8 +7,8 @@ export JXE_APIKEY=SAMPLE_JXE_APIKEY
 export GCLOUD_PROJECT=$PROJECT_ID
 export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
 export BUCKET_NAME=${PROJECT_ID}-sample-data
-export SA_NAME=illumina-script-sa
-export SA_EMAIL=${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
+
+
 export GCLOUD_REGION=us-central1
 export GCLOUD_ZONE=us-central1-a
 export GCLOUD_IMAGE=atos-illumina-jxe-stub-rc
@@ -20,4 +20,7 @@ export ILLUMINA_INPUT1="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1
 export ILLUMINA_INPUT2="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora"
 export ILLUMINA_R="s3://${BUCKET_NAME}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1"
 export ILLUMINA_ORA_REF="s3://${BUCKET_NAME}/references/lenadata"
+
 export JOB_NAME="projects/${PROJECT_ID}/locations/${GCLOUD_REGION}/jobs/job-dragen"
+export SA_JOB_NAME=illumina-script-sa
+export SA_JOB_EMAIL=${SA_JOB_NAME}@${PROJECT_ID}.iam.gserviceaccount.com

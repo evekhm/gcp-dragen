@@ -44,16 +44,16 @@ gsutil mb gs://$BUCKET_NAME
 
 
 echo "Creating HMAC keys and service account ..."
-export SA_NAME=storage-admin
-export SA_EMAIL=${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
-gcloud iam service-accounts create $SA_NAME \
+SET SA_NAME_STORAGE=storage-admin
+SET SA_EMAIL_STORAGE=${SA_NAME_STORAGE}@${PROJECT_ID}.iam.gserviceaccount.com
+gcloud iam service-accounts create $SA_NAME_STORAGE \
         --description="Storage Admin" \
         --display-name="storage-admin"
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-        --member="serviceAccount:${SA_EMAIL}" \
+        --member="serviceAccount:${SA_EMAIL_STORAGE}" \
         --role="roles/storage.admin"
 
-gsutil hmac create $SA_EMAIL
+gsutil hmac create $SA_EMAIL_STORAGE
 gsutil hmac list
 
 # terraform
@@ -77,16 +77,32 @@ gcloud services enable cloudresourcemanager.googleapis.com
   ##compute.instances.create
   ##compute.instances.get
 
-gcloud iam service-accounts create $SA_NAME \
+gcloud iam service-accounts create $SA_JOB_NAME \
         --description="Service Account to execute batch Job" \
-        --display-name=$SA_NAME
+        --display-name=$SA_JOB_NAME
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-        --member="serviceAccount:${SA_EMAIL}" \
+        --member="serviceAccount:${SA_JOB_EMAIL}" \
         --role="roles/compute.serviceAgent"
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-         --member="serviceAccount:${SA_EMAIL}" \
+         --member="serviceAccount:${SA_JOB_EMAIL}" \
          --role="roles/compute.admin"
 
+# permissions  to create a job (https://cloud.google.com/batch/docs/create-run-job-custom-service-account)
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --role="roles/iam.serviceAccountUser"
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --role="roles/batch.jobsEditor"
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --role="roles/iam.serviceAccountViewer"
+
+
+# For Batch Job
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --role="roles/batch.agentReporter"
 
 
 
