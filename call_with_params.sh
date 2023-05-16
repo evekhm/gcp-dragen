@@ -2,12 +2,28 @@
 set -e # Exit if error is detected during pipeline execution => terraform failing
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${DIR}"/SET
-gcloud config set project $PROJECT_ID
 
 SCRIPT=$1
 
+#Retrieving Secrets
+export S3_ACCESS_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_key" | tr -d '"')
+export S3_SECRET_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_secret" | tr -d '"')
+
+if [ -z "$S3_ACCESS_KEY" ]; then
+  echo "Error: S3_ACCESS_KEY could not be retrieved from $S3_SECRET secret"
+  exit
+fi
+
+if [ -z "$S3_SECRET_KEY" ]; then
+  echo "Error: S3_SECRET_KEY could not be retrieved from $S3_SECRET secret"
+  exit
+fi
+
 date_str=$(date +%s )
-"${SCRIPT}" --\
+"${SCRIPT}" \
+ --s3-access-key "$S3_ACCESS_KEY" \
+ --s3-secret-key "$S3_SECRET_KEY" \
+ --\
  -f \
   -1 "$ILLUMINA_INPUT1" \
   -2 "$ILLUMINA_INPUT2" \
@@ -38,4 +54,4 @@ date_str=$(date +%s )
   --intermediate-results-dir /tmp/whole_genome/temp \
   --logging-to-output-dir true \
   --syslogging-to-output-dir true \
-  --lic-server https://ILLUMNIA_LIC@license.edicogenome.com
+  --lic-server https://"$ILLUMINA_LICENSE"@license.edicogenome.com

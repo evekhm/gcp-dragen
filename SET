@@ -1,26 +1,32 @@
-export S3_ACCESS_KEY=SAMPLE_S3_ACCESS_KEY
-export S3_SECRET_KEY=SAMPLE_S3_SECRET_KEY
-export GCLOUD_NETWORK=default
-export GCLOUD_SUBNET=default
+# Jarvice
+export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
+
+# License Info
 export JXE_USERNAME=SAMPLE_JXE_USERNAME
 export JXE_APIKEY=SAMPLE_JXE_APIKEY
+export ILLUMINA_LICENSE=ILLUMNIA_LIC
+
+# GCP
 export GCLOUD_PROJECT=$PROJECT_ID
-export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
-export BUCKET_NAME=${PROJECT_ID}-sample-data
-
-
 export GCLOUD_REGION=us-central1
 export GCLOUD_ZONE=us-central1-a
 export GCLOUD_IMAGE=atos-illumina-jxe-stub-rc
 export GCLOUD_IMAGE_PROJECT=atos-illumina-public
 export GCLOUD_MACHINE=n1-standard-2
 export GCLOUD_INSTANCE=dragen
+export BUCKET_NAME=${PROJECT_ID}-sample-data
+export GCLOUD_NETWORK=default
+export GCLOUD_SUBNET=default
+export JOB_NAME="projects/${PROJECT_ID}/locations/${GCLOUD_REGION}/jobs/job-dragen"
+export SA_JOB_NAME=illumina-script-sa
+export SA_JOB_EMAIL=${SA_JOB_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
+export SA_NAME_STORAGE=storage-admin
+export SA_EMAIL_STORAGE=${SA_NAME_STORAGE}@${PROJECT_ID}.iam.gserviceaccount.com
+export S3_SECRET="s3_hmac_secret_key"
 
+# Input
 export ILLUMINA_INPUT1="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora"
 export ILLUMINA_INPUT2="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora"
 export ILLUMINA_R="s3://${BUCKET_NAME}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1"
 export ILLUMINA_ORA_REF="s3://${BUCKET_NAME}/references/lenadata"
 
-export JOB_NAME="projects/${PROJECT_ID}/locations/${GCLOUD_REGION}/jobs/job-dragen"
-export SA_JOB_NAME=illumina-script-sa
-export SA_JOB_EMAIL=${SA_JOB_NAME}@${PROJECT_ID}.iam.gserviceaccount.com

@@ -8,6 +8,7 @@ source "${DIR}"/SET
 gcloud services enable batch.googleapis.com compute.googleapis.com logging.googleapis.com # For batch Job
 gcloud services enable cloudresourcemanager.googleapis.com # To grant roles to SA
 gcloud services enable orgpolicy.googleapis.com # To modify Org Policies
+gcloud services enable secretmanager.googleapis.com # To store Secrets
 
 echo "Setting Org Policies..."
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
@@ -44,8 +45,7 @@ gsutil mb gs://$BUCKET_NAME
 
 
 echo "Creating HMAC keys and service account ..."
-SET SA_NAME_STORAGE=storage-admin
-SET SA_EMAIL_STORAGE=${SA_NAME_STORAGE}@${PROJECT_ID}.iam.gserviceaccount.com
+
 gcloud iam service-accounts create $SA_NAME_STORAGE \
         --description="Storage Admin" \
         --display-name="storage-admin"
@@ -53,8 +53,18 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
         --member="serviceAccount:${SA_EMAIL_STORAGE}" \
         --role="roles/storage.admin"
 
-gsutil hmac create $SA_EMAIL_STORAGE
-gsutil hmac list
+[ ! -d "$DIR/tmp" ] && mkdir "$DIR/tmp"
+gsutil hmac create "$SA_EMAIL_STORAGE" > tmp/hmackey.txt
+access_key=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $1}'`
+access_secret=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $2}'`
+echo "{\"access_key\": \"${access_key}\",  \"access_secret\": \"${access_secret}\" , \"endpoint\" : \"https://storage.googleapis.com\" }" > tmp/hmacsecret.json
+gcloud secrets create $S3_SECRET --replication-policy="automatic" --project=$PROJECT_ID
+gcloud secrets versions add  --data-file="tmp/hmacsecret.json"
+rm -rf tmp/hmacsecret.json tmp/hmackey.txt # delete temp file
+
+echo -n "my super secret data" | gcloud secrets create my-secret \
+    --replication-policy="replication-policy" \
+    --data-file=-
 
 # terraform
 #```shell
