@@ -41,7 +41,7 @@
 ### Execute batch Job
 
 ```shell
-./doit.sh
+./doit_batch.sh
 ```
 
 ## References
