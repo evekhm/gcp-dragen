@@ -99,11 +99,11 @@ dragen_cmd="jarvice-dragen-stub.sh \
     --username $JXE_USERNAME \
     --apikey $JXE_APIKEY \
     --dragen-app $JXE_APP \
-    ${UNKNOWN_ARGS[@]} -- $S3_ARGS $*"
+    $S3_ARGS \
+    ${UNKNOWN_ARGS[@]}"
 
 
 echo "$dragen_cmd"
-
 
 version="dev"
 
