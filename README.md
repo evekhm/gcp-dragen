@@ -19,7 +19,7 @@
 
 * Copy FASTQ data:
   * Download `HG002.novaseq.pcr-free.35x.R1.fastq.ora`, `HG002.novaseq.pcr-free.35x.R2.fastq.ora` from [Google Drive DRAGEN_data](https://drive.google.com/corp/drive/folders/16qFUVK-QNGtiNnr4yO-JCZnBNHvrGC11) into `data` directory.
-    * 
+    * > Ask Shyamal Mehtalia (smehtalia@illumina.com) for access. 
 * Copy `hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1` (you will need to install [wget](https://www.gnu.org/software/wget/) locally in case it is not installed) into `data` directory:
   ```shell
   cd data
