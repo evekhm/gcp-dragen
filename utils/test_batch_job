@@ -2,9 +2,8 @@ allocationPolicy:
   instances:
   - policy:
       machineType: n1-standard-2
-      provisioningModel: STANDARD
   labels:
-    batch-job-id: test-batch-1684957969
+    batch-job-id: test-batch-1684961536
   location:
     allowedLocations:
     - regions/us-central1
@@ -18,19 +17,19 @@ allocationPolicy:
       subnetwork: projects/illumina-dragen/regions/us-central1/subnetworks/default
   serviceAccount:
     email: illumina-script-sa@illumina-dragen.iam.gserviceaccount.com
-createTime: '2023-05-24T19:52:51.418155292Z'
+createTime: '2023-05-24T20:52:18.181533394Z'
 logsPolicy:
   destination: CLOUD_LOGGING
-name: projects/illumina-dragen/locations/us-central1/jobs/test-batch-1684957969
+name: projects/illumina-dragen/locations/us-central1/jobs/test-batch-1684961536
 status:
-  runDuration: 0.878313854s
+  runDuration: 1.189349519s
   state: SUCCEEDED
   statusEvents:
-  - description: Job state is set from QUEUED to SCHEDULED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684957969.
-    eventTime: '2023-05-24T19:52:55.328468092Z'
+  - description: Job state is set from QUEUED to SCHEDULED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684961536.
+    eventTime: '2023-05-24T20:52:23.035544108Z'
     type: STATUS_CHANGED
-  - description: Job state is set from SCHEDULED to SUCCEEDED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684957969.
-    eventTime: '2023-05-24T19:53:58.024864315Z'
+  - description: Job state is set from SCHEDULED to SUCCEEDED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684961536.
+    eventTime: '2023-05-24T20:53:17.135199528Z'
     type: STATUS_CHANGED
   taskGroups:
     group0:
@@ -45,7 +44,7 @@ status:
         provisioningModel: STANDARD
         taskPack: '1'
 taskGroups:
-- name: projects/183340175192/locations/us-central1/jobs/test-batch-1684957969/taskGroups/group0
+- name: projects/183340175192/locations/us-central1/jobs/test-batch-1684961536/taskGroups/group0
   parallelism: '1'
   taskCount: '1'
   taskSpec:
@@ -61,5 +60,5 @@ taskGroups:
         - echo Hello world! This is task . This job has a total of  tasks.
         entrypoint: /bin/sh
         imageUri: gcr.io/google-containers/busybox
-uid: test-batch-1684957-56a5a018-f13a-48910
-updateTime: '2023-05-24T19:53:58.024864315Z'
+uid: test-batch-1684961-00d91cf8-e873-405d0
+updateTime: '2023-05-24T20:53:17.135199528Z'

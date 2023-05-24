@@ -40,7 +40,6 @@ gcloud beta batch jobs submit "$JOB_NAME_UID" --network="projects/$PROJECT_ID/gl
       "instances": [
         {
           "policy": {
-            "provisioningModel": "STANDARD",
             "machineType": "${GCLOUD_MACHINE}"
           }
         }
