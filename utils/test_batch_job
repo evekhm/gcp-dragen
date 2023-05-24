@@ -3,7 +3,7 @@ allocationPolicy:
   - policy:
       machineType: n1-standard-2
   labels:
-    batch-job-id: test-batch-1684961536
+    batch-job-id: job-dragen-7b937475d9074bbfb7501ad080a9c0fe
   location:
     allowedLocations:
     - regions/us-central1
@@ -14,27 +14,28 @@ allocationPolicy:
   network:
     networkInterfaces:
     - network: projects/illumina-dragen/global/networks/default
+      noExternalIpAddress: true
       subnetwork: projects/illumina-dragen/regions/us-central1/subnetworks/default
   serviceAccount:
     email: illumina-script-sa@illumina-dragen.iam.gserviceaccount.com
-createTime: '2023-05-24T20:52:18.181533394Z'
+createTime: '2023-05-24T20:57:02.203335776Z'
+labels:
+  env: testing
+  type: script
 logsPolicy:
   destination: CLOUD_LOGGING
-name: projects/illumina-dragen/locations/us-central1/jobs/test-batch-1684961536
+name: projects/illumina-dragen/locations/us-central1/jobs/job-dragen-7b937475d9074bbfb7501ad080a9c0fe
 status:
-  runDuration: 1.189349519s
-  state: SUCCEEDED
+  runDuration: 0s
+  state: SCHEDULED
   statusEvents:
-  - description: Job state is set from QUEUED to SCHEDULED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684961536.
-    eventTime: '2023-05-24T20:52:23.035544108Z'
-    type: STATUS_CHANGED
-  - description: Job state is set from SCHEDULED to SUCCEEDED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684961536.
-    eventTime: '2023-05-24T20:53:17.135199528Z'
+  - description: Job state is set from QUEUED to SCHEDULED for job projects/183340175192/locations/us-central1/jobs/job-dragen-7b937475d9074bbfb7501ad080a9c0fe.
+    eventTime: '2023-05-24T20:57:04.912523923Z'
     type: STATUS_CHANGED
   taskGroups:
     group0:
       counts:
-        SUCCEEDED: '1'
+        PENDING: '1'
       instances:
       - bootDisk:
           image: projects/batch-custom-image/global/images/batch-cos-stable-official-20230510-00-p00
@@ -44,7 +45,7 @@ status:
         provisioningModel: STANDARD
         taskPack: '1'
 taskGroups:
-- name: projects/183340175192/locations/us-central1/jobs/test-batch-1684961536/taskGroups/group0
+- name: projects/183340175192/locations/us-central1/jobs/job-dragen-7b937475d9074bbfb7501ad080a9c0fe/taskGroups/group0
   parallelism: '1'
   taskCount: '1'
   taskSpec:
@@ -57,8 +58,9 @@ taskGroups:
     - container:
         commands:
         - -c
-        - echo Hello world! This is task . This job has a total of  tasks.
+        - echo Hello world! This is task ${BATCH_TASK_INDEX}. This job has a total
+          of ${BATCH_TASK_COUNT} tasks.
         entrypoint: /bin/sh
         imageUri: gcr.io/google-containers/busybox
-uid: test-batch-1684961-00d91cf8-e873-405d0
-updateTime: '2023-05-24T20:53:17.135199528Z'
+uid: job-dragen-7b93747-1700c268-b55d-409b0
+updateTime: '2023-05-24T20:57:04.912523923Z'

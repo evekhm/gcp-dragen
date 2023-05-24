@@ -2,13 +2,15 @@
 gcloud config set project $PROJECT_ID
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/SET
+source "${DIR}"/../SET
 
 # Enable APIs
 gcloud services enable batch.googleapis.com compute.googleapis.com logging.googleapis.com # For batch Job
 gcloud services enable cloudresourcemanager.googleapis.com # To grant roles to SA
 gcloud services enable orgpolicy.googleapis.com # To modify Org Policies
 gcloud services enable secretmanager.googleapis.com # To store Secrets
+gcloud services enable cloudfunctions.googleapis.com # To deploy Cloud Function
+gcloud services enable cloudbuild.googleapis.com # To deploy Cloud Function
 
 echo "Setting Org Policies..."
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
@@ -91,32 +93,36 @@ gcloud iam service-accounts create $SA_JOB_NAME \
         --description="Service Account to execute batch Job" \
         --display-name=$SA_JOB_NAME
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-        --member="serviceAccount:${SA_JOB_EMAIL}" \
+        --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
         --role="roles/compute.serviceAgent"
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/compute.admin"
 
 # permissions  to create a job (https://cloud.google.com/batch/docs/create-run-job-custom-service-account)
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/iam.serviceAccountUser"
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/batch.jobsEditor"
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/iam.serviceAccountViewer"
 
+# For Log Monitoring
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
+         --role="roles/logging.logWriter"
 
 # For Batch Job
 gcloud projects add-iam-policy-binding $PROJECT_ID \
-         --member="serviceAccount:${SA_JOB_EMAIL}" \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/batch.agentReporter"
 
 
+bash -e ${DIR}/
 
-#export KEY=${PROJECT_ID}_${SA_NAME}.json
-#gcloud iam service-accounts keys create ${KEY}  --iam-account=${SA_EMAIL}
+
 
 

@@ -140,7 +140,7 @@ gcloud batch jobs submit "$JOB_NAME_UID" --network="projects/$PROJECT_ID/global/
   ],
   "allocationPolicy": {
     "serviceAccount": {
-        "email": "${SA_JOB_EMAIL}"
+        "email": "${JOB_SERVICE_ACCOUNT}"
     },
     "instances": [
       {
@@ -159,9 +159,9 @@ EOD
 
 echo "Commands to manage the jobs:"
 echo "Details about $JOB_NAME_UID job:"
-echo "  gcloud beta batch jobs describe $JOB_NAME_UID"
+echo "  gcloud batch jobs describe $JOB_NAME_UID"
 echo "Delete $JOB_NAME_UID job:"
-echo "  gcloud beta batch jobs delete $JOB_NAME_UID"
+echo "  gcloud batch jobs delete $JOB_NAME_UID"
 echo "List all jobs:"
-echo "  gcloud beta batch jobs list"
+echo "  gcloud batch jobs list"
 
