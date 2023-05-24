@@ -1,0 +1,65 @@
+allocationPolicy:
+  instances:
+  - policy:
+      machineType: n1-standard-2
+      provisioningModel: STANDARD
+  labels:
+    batch-job-id: test-batch-1684957969
+  location:
+    allowedLocations:
+    - regions/us-central1
+    - zones/us-central1-a
+    - zones/us-central1-b
+    - zones/us-central1-c
+    - zones/us-central1-f
+  network:
+    networkInterfaces:
+    - network: projects/illumina-dragen/global/networks/default
+      subnetwork: projects/illumina-dragen/regions/us-central1/subnetworks/default
+  serviceAccount:
+    email: illumina-script-sa@illumina-dragen.iam.gserviceaccount.com
+createTime: '2023-05-24T19:52:51.418155292Z'
+logsPolicy:
+  destination: CLOUD_LOGGING
+name: projects/illumina-dragen/locations/us-central1/jobs/test-batch-1684957969
+status:
+  runDuration: 0.878313854s
+  state: SUCCEEDED
+  statusEvents:
+  - description: Job state is set from QUEUED to SCHEDULED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684957969.
+    eventTime: '2023-05-24T19:52:55.328468092Z'
+    type: STATUS_CHANGED
+  - description: Job state is set from SCHEDULED to SUCCEEDED for job projects/183340175192/locations/us-central1/jobs/test-batch-1684957969.
+    eventTime: '2023-05-24T19:53:58.024864315Z'
+    type: STATUS_CHANGED
+  taskGroups:
+    group0:
+      counts:
+        SUCCEEDED: '1'
+      instances:
+      - bootDisk:
+          image: projects/batch-custom-image/global/images/batch-cos-stable-official-20230510-00-p00
+          sizeGb: '30'
+          type: pd-ssd
+        machineType: n1-standard-2
+        provisioningModel: STANDARD
+        taskPack: '1'
+taskGroups:
+- name: projects/183340175192/locations/us-central1/jobs/test-batch-1684957969/taskGroups/group0
+  parallelism: '1'
+  taskCount: '1'
+  taskSpec:
+    computeResource:
+      cpuMilli: '1000'
+      memoryMib: '512'
+    maxRetryCount: 2
+    maxRunDuration: 3600s
+    runnables:
+    - container:
+        commands:
+        - -c
+        - echo Hello world! This is task . This job has a total of  tasks.
+        entrypoint: /bin/sh
+        imageUri: gcr.io/google-containers/busybox
+uid: test-batch-1684957-56a5a018-f13a-48910
+updateTime: '2023-05-24T19:53:58.024864315Z'
