@@ -11,6 +11,8 @@ gcloud services enable orgpolicy.googleapis.com # To modify Org Policies
 gcloud services enable secretmanager.googleapis.com # To store Secrets
 gcloud services enable cloudfunctions.googleapis.com # To deploy Cloud Function
 gcloud services enable cloudbuild.googleapis.com # To deploy Cloud Function
+gcloud services enable cloudresourcemanager.googleapis.com # For batch Job
+
 
 echo "Setting Org Policies..."
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
@@ -47,7 +49,6 @@ gsutil mb gs://$BUCKET_NAME
 
 
 echo "Creating HMAC keys and service account ..."
-
 gcloud iam service-accounts create $SA_NAME_STORAGE \
         --description="Storage Admin" \
         --display-name="storage-admin"
@@ -60,13 +61,23 @@ gsutil hmac create "$SA_EMAIL_STORAGE" > tmp/hmackey.txt
 access_key=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $1}'`
 access_secret=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $2}'`
 echo "{\"access_key\": \"${access_key}\",  \"access_secret\": \"${access_secret}\" , \"endpoint\" : \"https://storage.googleapis.com\" }" > tmp/hmacsecret.json
-gcloud secrets create $S3_SECRET --replication-policy="automatic" --project=$PROJECT_ID
-gcloud secrets versions add  --data-file="tmp/hmacsecret.json"
+gcloud secrets describe ${S3_SECRET}
+if [ $? -eq 1 ]; then
+  gcloud secrets create $S3_SECRET --replication-policy="automatic" --project=$PROJECT_ID
+fi
+gcloud secrets versions add $S3_SECRET --data-file="tmp/hmacsecret.json"
 rm -rf tmp/hmacsecret.json tmp/hmackey.txt # delete temp file
 
-echo -n "my super secret data" | gcloud secrets create my-secret \
-    --replication-policy="replication-policy" \
-    --data-file=-
+
+# Add secret file to Secret Manager
+echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
+gcloud secrets describe ${LICENCE_SECRET}
+if [ $? -eq 1 ]; then
+  gcloud secrets create $LICENCE_SECRET --replication-policy="automatic" --project=$PROJECT_ID
+fi
+gcloud secrets versions add $LICENCE_SECRET --data-file="tmp/licsecret.json"
+rm -rf tmp/licsecret.json # delete temp file
+
 
 # terraform
 #```shell
@@ -81,8 +92,8 @@ echo -n "my super secret data" | gcloud secrets create my-secret \
 #}
 #```
 
-echo "Service Account to execute batch Job"
-gcloud services enable cloudresourcemanager.googleapis.com
+echo "Service Account to execute Batch Job"
+
 
 # TODO Fine Grain Create Role
 # # Create new Role
@@ -119,6 +130,16 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
 gcloud projects add-iam-policy-binding $PROJECT_ID \
          --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/batch.agentReporter"
+
+# To access Secret
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
+         --role="roles/secretmanager.viewer"
+
+# To access Secret ((secretmanager.versions.access))
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
+         --role="roles/secretmanager.secretAccessor"
 
 
 bash -e ${DIR}/

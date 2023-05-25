@@ -1,5 +1,14 @@
 ## Create GCP Environment for DRAGEN
 
+### Pre-requisites
+
+Following licenses and keys are required to operate this solution:
+* Illumina 
+> Obtain a DRAGEN license key from Illumina.  
+* Atos
+> Obtain a JARVICE username and API key from  Atos/Nimbix.  
+> If you do not have a JARVICE username and API key for the Atos FPGA Acceleration for Illumina DRAGEN Bio-IT Platform solution, please contact support@nimbix.net.
+
 ### GCP Infrastructure
 
 * Create GCP Project
@@ -8,6 +17,12 @@
   export PROJECT_ID=
   ```
 
+* Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`)to set env variables (to be used during the deployment)
+  ```shell
+  export ILLUMINA_LICENSE=
+  export JXE_APIKEY=
+  export JXE_USERNAME=
+  ```
 * Run following command to provision required infrastructure (Org policies, VPC, GCP Buckets, HMAC keys):
   ```shell
   ./setup.sh

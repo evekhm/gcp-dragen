@@ -13,12 +13,17 @@ gcloud functions deploy $CLOUD_FUNCTION_NAME \
     --service-account=$JOB_SERVICE_ACCOUNT \
     --timeout=400 \
     --ingress-settings=${INGRESS_SETTINGS} \
-    --set-env-vars REGION=$GCLOUD_REGION \
-    --set-env-vars JOB_NAME=$JOB_NAME_SHORT \
-    --set-env-vars NETWORK=$GCLOUD_NETWORK \
-    --set-env-vars SUBNET=$GCLOUD_SUBNET \
-    --set-env-vars SERVICE_ACCOUNT_EMAIL=$JOB_SERVICE_ACCOUNT \
-    --set-env-vars MACHINE=$GCLOUD_MACHINE \
+    --set-env-vars GCLOUD_REGION=$GCLOUD_REGION \
+    --set-env-vars JOB_NAME_SHORT=$JOB_NAME_SHORT \
+    --set-env-vars GCLOUD_NETWORK=$GCLOUD_NETWORK \
+    --set-env-vars IMAGE_URI=$IMAGE_URI \
+    --set-env-vars GCLOUD_SUBNET=$GCLOUD_SUBNET \
+    --set-env-vars JOB_SERVICE_ACCOUNT=$JOB_SERVICE_ACCOUNT \
+    --set-env-vars JXE_APP=$JXE_APP \
+    --set-env-vars GCLOUD_MACHINE=$GCLOUD_MACHINE \
+    --set-env-vars TRIGGER_FILE_NAME=$TRIGGER_FILE_NAME \
+    --set-env-vars S3_SECRET=$S3_SECRET \
+    --set-env-vars LICENCE_SECRET=$LICENCE_SECRET \
     --trigger-resource=gs://${INPUT_BUCKET} \
     --trigger-event=google.storage.object.finalize
 

@@ -8,6 +8,10 @@ SCRIPT=$1
 #Retrieving Secrets
 export S3_ACCESS_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_key" | tr -d '"')
 export S3_SECRET_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_secret" | tr -d '"')
+export ILLUMINA_LICENSE=$(gcloud secrets versions access latest --secret="$LICENCE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
+export JXE_USERNAME=$(gcloud secrets versions access latest --secret="$LICENCE_SECRET" --project=$PROJECT_ID | jq ".jxe_username" | tr -d '"')
+export JXE_APIKEY=$(gcloud secrets versions access latest --secret="$LICENCE_SECRET" --project=$PROJECT_ID | jq ".jxe_apikey" | tr -d '"')
+
 
 if [ -z "$S3_ACCESS_KEY" ]; then
   echo "Error: S3_ACCESS_KEY could not be retrieved from $S3_SECRET secret"
@@ -18,6 +22,22 @@ if [ -z "$S3_SECRET_KEY" ]; then
   echo "Error: S3_SECRET_KEY could not be retrieved from $S3_SECRET secret"
   exit
 fi
+
+if [ -z "$JXE_APIKEY" ]; then
+  echo "Error: JXE_APIKEY could not be retrieved from $LICENCE_SECRET secret"
+  exit
+fi
+
+if [ -z "$ILLUMINA_LICENSE" ]; then
+  echo "Error: ILLUMINA_LICENSE could not be retrieved from $LICENCE_SECRET secret"
+  exit
+fi
+
+if [ -z "$JXE_USERNAME" ]; then
+  echo "Error: JXE_USERNAME could not be retrieved from $LICENCE_SECRET secret"
+  exit
+fi
+
 
 date_str=$(date +%s )
 "${SCRIPT}" \
