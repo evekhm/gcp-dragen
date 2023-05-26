@@ -2,8 +2,7 @@
 gcloud config set project $PROJECT_ID
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-  source "${DIR}"/../SET
-
+  source "${DIR}"/SET
 
 echo "Deploying Cloud Function=[$SOURCE_ENTRY_POINT]..."
 gcloud functions deploy $CLOUD_FUNCTION_NAME \
@@ -18,6 +17,7 @@ gcloud functions deploy $CLOUD_FUNCTION_NAME \
     --set-env-vars GCLOUD_NETWORK=$GCLOUD_NETWORK \
     --set-env-vars IMAGE_URI=$IMAGE_URI \
     --set-env-vars GCLOUD_SUBNET=$GCLOUD_SUBNET \
+    --set-env-vars OUTPUT_BUCKET=$OUTPUT_BUCKET \
     --set-env-vars JOB_SERVICE_ACCOUNT=$JOB_SERVICE_ACCOUNT \
     --set-env-vars JXE_APP=$JXE_APP \
     --set-env-vars GCLOUD_MACHINE=$GCLOUD_MACHINE \

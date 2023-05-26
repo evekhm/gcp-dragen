@@ -2,33 +2,50 @@
 gcloud config set project $PROJECT_ID
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/../SET
+source "${DIR}"/SET
 
 # Enable APIs
-gcloud services enable batch.googleapis.com compute.googleapis.com logging.googleapis.com # For batch Job
-gcloud services enable cloudresourcemanager.googleapis.com # To grant roles to SA
-gcloud services enable orgpolicy.googleapis.com # To modify Org Policies
-gcloud services enable secretmanager.googleapis.com # To store Secrets
-gcloud services enable cloudfunctions.googleapis.com # To deploy Cloud Function
-gcloud services enable cloudbuild.googleapis.com # To deploy Cloud Function
-gcloud services enable cloudresourcemanager.googleapis.com # For batch Job
+echo "Enabling Required APIs..."
+  APIS="compute.googleapis.com \
+    pubsub.googleapis.com \
+    batch.googleapis.com \
+    cloudresourcemanager.googleapis.com \
+    secretmanager.googleapis.com \
+    logging.googleapis.com \
+    storage.googleapis.com \
+    cloudfunctions.googleapis.com \
+    cloudbuild.googleapis.com \
+    cloudresourcemanager.googleapis.com"
 
+gcloud services enable orgpolicy.googleapis.com #To avoid Error for concurrent policy changes.
+sleep 5 #Todo check for operation wait to complete
+
+# gcloud services list --enabled|grep -v NAME|wc -l
+gcloud services enable $APIS
+
+enabled=$(gcloud services list --enabled | grep compute)
+while [ -z "$enabled" ]; do
+  enabled=$(gcloud services list --enabled | grep compute)
+  sleep 10;
+done
 
 echo "Setting Org Policies..."
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
 gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID
 gcloud org-policies reset constraints/compute.requireShieldedVm --project=$PROJECT_ID
 gcloud org-policies reset constraints/storage.restrictAuthTypes --project=$PROJECT_ID
+sleep 10 # Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
 
 gcloud resource-manager org-policies describe    compute.trustedImageProjects --project=$PROJECT_ID    --effective > policy.yaml
 echo "  - projects/illumina-dragen" >> policy.yaml
+echo "  - projects/atos-illumina-public" >> policy.yaml
 echo "  - projects/batch-custom-image" >> policy.yaml
 gcloud resource-manager org-policies set-policy \
    policy.yaml --project=$PROJECT_ID
+rm  policy.yaml
 
 echo "Finished with Org policy Update"
 
-gcloud services enable compute.googleapis.com
 network=$(gcloud compute networks list --filter="name=(\"$GCLOUD_NETWORK\" )" --format='get(NAME)' 2>/dev/null)
 if [ -z "$network" ]; then
   echo "Creating Network $GCLOUD_NETWORK ..."
@@ -44,25 +61,39 @@ if [ -z "$network" ]; then
   --rules=tcp:22 --source-ranges=0.0.0.0/0
 fi
 
-echo "Creating GCS Bucket ..."
-gsutil mb gs://$BUCKET_NAME
+gsutil ls "gs://${BUCKET_NAME}" 2> /dev/null
+RETURN=$?
+if [[ $RETURN -gt 0 ]]; then
+    echo "Creating GCS Bucket gs://${TF_BUCKET_NAME}..."
+    echo "Bucket does not exist, creating gs://${TF_BUCKET_NAME}"
+    gsutil mb gs://$BUCKET_NAME
+    echo
+fi
 
 
-echo "Creating HMAC keys and service account ..."
-gcloud iam service-accounts create $SA_NAME_STORAGE \
-        --description="Storage Admin" \
-        --display-name="storage-admin"
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-        --member="serviceAccount:${SA_EMAIL_STORAGE}" \
-        --role="roles/storage.admin"
+SA_EXISTS=$(gcloud iam service-accounts list --filter="${SA_NAME_STORAGE}" | wc -l)
+if [ $SA_EXISTS = "0" ]; then
+  echo "Creating service account ${SA_NAME_STORAGE}..."
+  gcloud iam service-accounts create $SA_NAME_STORAGE \
+          --description="Storage Admin" \
+          --display-name="storage-admin"
+  gcloud projects add-iam-policy-binding $PROJECT_ID \
+          --member="serviceAccount:${SA_EMAIL_STORAGE}" \
+          --role="roles/storage.admin"
+fi
 
 [ ! -d "$DIR/tmp" ] && mkdir "$DIR/tmp"
+
+echo "Creating HMAC keys..."
 gsutil hmac create "$SA_EMAIL_STORAGE" > tmp/hmackey.txt
 access_key=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $1}'`
 access_secret=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $2}'`
 echo "{\"access_key\": \"${access_key}\",  \"access_secret\": \"${access_secret}\" , \"endpoint\" : \"https://storage.googleapis.com\" }" > tmp/hmacsecret.json
-gcloud secrets describe ${S3_SECRET}
-if [ $? -eq 1 ]; then
+
+
+exists=$(gcloud secrets describe ${S3_SECRET} 2> /dev/null)
+if [ -z "$exists" ]; then
+  echo "Creating ${S3_SECRET} secret..."
   gcloud secrets create $S3_SECRET --replication-policy="automatic" --project=$PROJECT_ID
 fi
 gcloud secrets versions add $S3_SECRET --data-file="tmp/hmacsecret.json"
@@ -71,8 +102,9 @@ rm -rf tmp/hmacsecret.json tmp/hmackey.txt # delete temp file
 
 # Add secret file to Secret Manager
 echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
-gcloud secrets describe ${LICENCE_SECRET}
-if [ $? -eq 1 ]; then
+exists=$(gcloud secrets describe ${LICENCE_SECRET} 2> /dev/null)
+if [ -z "$exists" ]; then
+  echo "Creating $LICENCE_SECRET secret..."
   gcloud secrets create $LICENCE_SECRET --replication-policy="automatic" --project=$PROJECT_ID
 fi
 gcloud secrets versions add $LICENCE_SECRET --data-file="tmp/licsecret.json"
@@ -92,17 +124,18 @@ rm -rf tmp/licsecret.json # delete temp file
 #}
 #```
 
-echo "Service Account to execute Batch Job"
-
+SA_EXISTS=$(gcloud iam service-accounts list --filter="${SA_JOB_NAME}" | wc -l)
+if [ $SA_EXISTS = "0" ]; then
+  echo "Creating ${SA_JOB_NAME} Service Account to execute Batch Job"
+  gcloud iam service-accounts create $SA_JOB_NAME \
+          --description="Service Account to execute batch Job" \
+          --display-name=$SA_JOB_NAME
+fi
 
 # TODO Fine Grain Create Role
 # # Create new Role
   ##compute.instances.create
   ##compute.instances.get
-
-gcloud iam service-accounts create $SA_JOB_NAME \
-        --description="Service Account to execute batch Job" \
-        --display-name=$SA_JOB_NAME
 gcloud projects add-iam-policy-binding $PROJECT_ID \
         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
         --role="roles/compute.serviceAgent"
@@ -142,7 +175,20 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
          --role="roles/secretmanager.secretAccessor"
 
 
-bash -e ${DIR}/
+bash -e "${DIR}"/deploy.sh
+
+echo "Success! Infrastructure deployed and ready!"
+echo "Next steps:"
+echo " > Upload data to gs://$BUCKET_NAME/<your_folder>:"
+echo " -- R1x.ora into  gs://${BUCKET_NAME}/<your_folder>/inputs"
+echo " -- R2x.ora into  gs://${BUCKET_NAME}/<your_folder>/inputs"
+echo " -- Reference data gs://${BUCKET_NAME}/<your_folder>/references"
+echo " -- lenadata inside gs://${BUCKET_NAME}/<your_folder>/lendata"
+
+echo " > Start the pipeline: "
+echo "Drop empty file names START_PIPELINE inside gs://${BUCKET_NAME}/<your_folder>"
+echo "Or run following command:"
+echo "./start_pipeline.sh <your_folder>"
 
 
 

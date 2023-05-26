@@ -70,7 +70,7 @@ date_str=$(date +%s )
   --repeat-genotype-enable true \
   --repeat-genotype-use-catalog expanded \
   --output-file-prefix HG002_pure \
-  --output-directory s3://"${BUCKET_NAME}"/output/"${date_str}" \
+  --output-directory s3://"${OUTPUT_BUCKET}"/"${date_str}" \
   --intermediate-results-dir /tmp/whole_genome/temp \
   --logging-to-output-dir true \
   --syslogging-to-output-dir true \

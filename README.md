@@ -27,6 +27,8 @@ Following licenses and keys are required to operate this solution:
   ```shell
   ./setup.sh
   ```
+> You should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"`
+ 
 
 ### Download Sample Data
 
@@ -53,8 +55,12 @@ Following licenses and keys are required to operate this solution:
 ./copy_to_gcs.sh
 ```
 
-### Execute batch Job
+### Trigger the pipeline
 
+### Directly from GCS
+Drop empty file named `START_PIPELINE` inside gs://${PROJECT_ID}-sample-data
+
+### From shell 
 ```shell
 ./doit_batch.sh
 ```
