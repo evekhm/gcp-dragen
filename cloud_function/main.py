@@ -64,7 +64,7 @@ def load_config(bucketname, file_path):
   return {}
 
 
-def run_job(event, context):
+def run_dragen_job(event, context):
   print(event)
   bucket = None
   file_path = None
@@ -397,7 +397,7 @@ def create_script_job(project_id: str, region: str, network: str,
   if not batch:
     batch = batch_v1.BatchServiceClient()
 
-  # return batch.create_job(create_request)
+  return batch.create_job(create_request)
   # [END batch_create_script_job]
 
 
@@ -410,5 +410,5 @@ if __name__ == "__main__":
                               os.environ.get("PROJECT_ID", ""))
   bucket = f'{project_id}-sample-data'
   print(f"Using file_name={name}, bucket={bucket}")
-  run_job({'bucket': bucket,
+  run_dragen_job({'bucket': bucket,
            'name': name, }, None)
