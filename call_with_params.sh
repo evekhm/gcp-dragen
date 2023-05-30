@@ -6,10 +6,10 @@ source "${DIR}"/SET
 SCRIPT=$1
 
 # Hard-coded Input files
-export ILLUMINA_INPUT1="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora"
-export ILLUMINA_INPUT2="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora"
-export ILLUMINA_R="s3://${BUCKET_NAME}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1"
-export ILLUMINA_ORA_REF="s3://${BUCKET_NAME}/references/lenadata"
+export ILLUMINA_INPUT1="s3://${INPUT_BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora"
+export ILLUMINA_INPUT2="s3://${INPUT_BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora"
+export ILLUMINA_R="s3://${INPUT_BUCKET_NAME}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1"
+export ILLUMINA_ORA_REF="s3://${INPUT_BUCKET_NAME}/references/lenadata"
 
 # Retrieving Secrets
 export S3_ACCESS_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_key" | tr -d '"')
@@ -76,7 +76,7 @@ date_str=$(date +%s )
   --repeat-genotype-enable true \
   --repeat-genotype-use-catalog expanded \
   --output-file-prefix HG002_pure \
-  --output-directory s3://"${OUTPUT_BUCKET}"/"${date_str}" \
+  --output-directory s3://"${OUTPUT_BUCKET_NAME}"/"${date_str}" \
   --intermediate-results-dir /tmp/whole_genome/temp \
   --logging-to-output-dir true \
   --syslogging-to-output-dir true \

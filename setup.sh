@@ -30,6 +30,15 @@ gcloud config set project $PROJECT_ID
 
 source "${DIR}"/SET
 
+function create_bucket(){
+  bucket_name=$1
+  gsutil ls "gs://${bucket_name}" 2> /dev/null
+  RETURN=$?
+  if [[ $RETURN -gt 0 ]]; then
+      $printf "Creating GCS Bucket gs://${bucket_name}..."  | tee -a "$LOG"
+      gsutil mb gs://$bucket_name
+  fi
+}
 # gcloud services list --enabled|grep -v NAME|wc -l
 
 # Enable APIs
@@ -107,13 +116,8 @@ if [ -z "$network" ]; then
   --rules=tcp:22 --source-ranges=0.0.0.0/0
 fi
 
-gsutil ls "gs://${BUCKET_NAME}" 2> /dev/null
-RETURN=$?
-if [[ $RETURN -gt 0 ]]; then
-    $printf "Creating GCS Bucket gs://${TF_BUCKET_NAME}..."  | tee -a "$LOG"
-    gsutil mb gs://$BUCKET_NAME
-fi
-
+create_bucket "${INPUT_BUCKET_NAME}"
+create_bucket "${OUTPUT_BUCKET_NAME}"
 
 SA_EXISTS=$(gcloud iam service-accounts list --filter="${SA_NAME_STORAGE}" | wc -l)
 if [ $SA_EXISTS = "0" ]; then
@@ -238,23 +242,23 @@ $printf "Preparing config.json file" | tee -a "$LOG"
 sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
-    s|__OUT_BUCKET__|'"$OUTPUT_BUCKET"'|g;
+    s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
     ' "${DIR}/cloud_function/config.sample.json" > "${DIR}/cloud_function/config.json"
 
-gsutil cp "${DIR}/cloud_function/config.json" gs://"$BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/cloud_function/config.json" gs://"$INPUT_BUCKET_NAME"/ | tee -a "$LOG"
 
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 
 $printf "Success! Infrastructure deployed and ready!"  | tee -a "$LOG"
 echo "Next steps:"  | tee -a "$LOG"
-echo " > Upload data to gs://$BUCKET_NAME/<your_folder>:"  | tee -a "$LOG"
-echo " -- R1x.ora into  gs://${BUCKET_NAME}/<your_folder>/inputs/xxR1xxx.ora"  | tee -a "$LOG"
-echo " -- R2x.ora into  gs://${BUCKET_NAME}/<your_folder>/inputs/xxxR2xxx.ora"  | tee -a "$LOG"
-echo " -- Reference data gs://${BUCKET_NAME}/<your_folder>/references/h38xxxx"  | tee -a "$LOG"
-echo " -- lenadata inside gs://${BUCKET_NAME}/<your_folder>/references/lenadata"  | tee -a "$LOG"
+echo " > Upload data to gs://$INPUT_BUCKET_NAME/<your_folder>:"  | tee -a "$LOG"
+echo " -- R1x.ora into  gs://${INPUT_BUCKET_NAME}/<your_folder>/inputs/xxR1xxx.ora"  | tee -a "$LOG"
+echo " -- R2x.ora into  gs://${INPUT_BUCKET_NAME}/<your_folder>/inputs/xxxR2xxx.ora"  | tee -a "$LOG"
+echo " -- Reference data gs://${INPUT_BUCKET_NAME}/<your_folder>/references/h38xxxx"  | tee -a "$LOG"
+echo " -- lenadata inside gs://${INPUT_BUCKET_NAME}/<your_folder>/references/lenadata"  | tee -a "$LOG"
 
 echo " > Start the pipeline: "  | tee -a "$LOG"
-echo "Drop empty file named START_PIPELINE inside gs://${BUCKET_NAME}/<your_folder>"  | tee -a "$LOG"
+echo "Drop empty file named START_PIPELINE inside gs://${INPUT_BUCKET_NAME}/<your_folder>"  | tee -a "$LOG"
 echo "Or run following command:"  | tee -a "$LOG"
 echo "./start_pipeline.sh <your_folder>"  | tee -a "$LOG"
 

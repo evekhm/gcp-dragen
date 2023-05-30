@@ -2,7 +2,7 @@
 - [Create GCP Environment for DRAGEN](#create-gcp-environment-for-dragen)
   * [Pre-requisites](#pre-requisites)
   * [GCP Infrastructure](#gcp-infrastructure)
-- [Upload Required Input Data](#upload-required-input-data)
+- [Upload Required Input Data](#upload-required-data)
 - [Trigger the pipeline](#trigger-the-pipeline)
   * [Directly from GCS](#directly-from-gcs)
   * [From shell](#from-shell)
@@ -17,7 +17,7 @@ This is a solution using GCP Cloud Storage -> Pub/Sub -> Cloud Function -> Batch
 It offers a simplified user experience:
 * Easy provisioning of the infrustructure
 * Easy way to trigger pipeline execution, by dropping an empty file called START_PIPELINE into the Cloud Storage bucket with required input data.
-  * The Pipeline execution can be configured by changing config.json file inside the  gs://$PROJECT_ID-sample-data directory
+  * The Pipeline execution can be configured by changing config.json file inside the  gs://$PROJECT_ID-input directory
 
 
 ## Create GCP Environment for DRAGEN
@@ -81,47 +81,47 @@ Following licenses and keys are required to operate this solution:
 > Command will take ~ 5 minutes and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
  
 
-## Upload Required Input Data
+## Upload Required Data
 
 > Download data using your development machine (Cloud Shell will not have enough capacity). 
 
-* Upload FASTQ ORA data to `gs://${PROJECT_ID}-sample-data/[your_folder]/inputs` ([your_folder] is optional)
+* Upload FASTQ ORA data to `gs://${PROJECT_ID}-input/[your_folder]/inputs` ([your_folder] is optional)
   * For pipeline to work, there should be two `.ora` files, one containing `R1` and another `R2` in the name.
   * As sample data, you could use `HG002.novaseq.pcr-free.35x.R1.fastq.ora`, `HG002.novaseq.pcr-free.35x.R2.fastq.ora` from [Google Drive DRAGEN_data](https://drive.google.com/corp/drive/folders/16qFUVK-QNGtiNnr4yO-JCZnBNHvrGC11) into `data` directory. Ask [Shyamal Mehtalia](mailto:smehtalia@illumina.com) for access. 
 
 
-* Upload Reference hg38 data to `gs://${PROJECT_ID}-sample-data/[your_folder]/references/`
+* Upload Reference hg38 data to `gs://${PROJECT_ID}-input/[your_folder]/references/`
   * For pipeline to work, the reference directory should start with `hg38`:
   * As sample data, Copy `hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1` (you will need to install [wget](https://www.gnu.org/software/wget/) locally in case it is not installed) into `data` directory:
-    ```shell
+    ```shell~~~~
     cd data
     wget https://webdata.illumina.com/downloads/software/dragen/hg38%2Balt_masked%2Bcnv%2Bgraph%2Bhla%2Brna-8-r2.0-1.run
     chmod +x hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1.run
     ./hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1.run  --target hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1
     cd ..
     ```
-* Upload `lenadata` to `gs://${PROJECT_ID}-sample-data/[your_folder]/references/`
+* Upload `lenadata` to `gs://${PROJECT_ID}-input/[your_folder]/references/`
   * As sample data, use [lenadata folder](https://drive.google.com/corp/drive/folders/1pOFmVh8YwsH1W9e8En7jxzEYF_0O2rmr). Unzip folder (`unzip lendata-xxxx.zip`) into `data` directory (should end up as `data/lendata/refbin` and `data/lendata/lena_index`)
   
 
 ## Trigger the pipeline
 
 ### Directly from GCS
-Drop empty file named `START_PIPELINE` inside `gs://${PROJECT_ID}-sample-data/[your_folder]`
+Drop empty file named `START_PIPELINE` inside `gs://${PROJECT_ID}-input/[your_folder]`
 
 ### From shell
-Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-sample-data/[your_folder]` directory:
+Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder]` directory:
 ```shell
 ./start_pipeline.sh your_folder
 ```
 
 ## Configuration
-Sample configuration file is uploaded to the `gs://$PROJECT_ID-sample-data` folder during the setup step.
+Sample configuration file is uploaded to the `gs://$PROJECT_ID-input` folder during the setup step.
 This file can be modified in order to adjust the pipeline execution.
 
-If the job is triggered inside a sub-directory, for example: `gs://$PROJECT_ID-sample-data/john/test-run1`
-(by uploading `START_PIPELINE` into the `gs://$PROJECT_ID-sample-data/john/test-run1` directory), then system will first check if there is a local `config.json` file present.
-If not, it will check a parent directory, until it reaches the top `gs://$PROJECT_ID-sample-data`. This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
+If the job is triggered inside a sub-directory, for example: `gs://$PROJECT_ID-input/john/test-run1`
+(by uploading `START_PIPELINE` into the `gs://$PROJECT_ID-input/john/test-run1` directory), then system will first check if there is a local `config.json` file present.
+If not, it will check a parent directory, until it reaches the top `gs://$PROJECT_ID-input`. This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
 
 
 

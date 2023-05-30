@@ -408,7 +408,7 @@ if __name__ == "__main__":
 
   project_id = os.environ.get("GCP_PROJECT",
                               os.environ.get("PROJECT_ID", ""))
-  bucket = f'{project_id}-sample-data'
+  bucket = f'{project_id}-input'
   print(f"Using file_name={name}, bucket={bucket}")
   run_dragen_job({'bucket': bucket,
            'name': name, }, None)
