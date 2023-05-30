@@ -34,7 +34,7 @@ export SA_EMAIL_STORAGE=${SA_NAME_STORAGE}@${PROJECT_ID}.iam.gserviceaccount.com
 
 # Secrets
 export S3_SECRET="s3_hmac_secret_key"
-export LICENCE_SECRET="license_secret_key"
+export LICENSE_SECRET="license_secret_key"
 
 # Cloud Function Params
 export SOURCE_DIR="${DIR}/cloud_function"  # Cloud Function Directory - relative (main.py)

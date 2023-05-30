@@ -190,7 +190,7 @@ def get_command(bucket, prefix, project_id, dragen_options, jarvice_options):
   network = os.getenv('GCLOUD_NETWORK', "default")
   subnet = os.getenv('GCLOUD_SUBNET', "default")
 
-  licence_secret = os.getenv('LICENCE_SECRET')
+  licence_secret = os.getenv('LICENSE_SECRET')
   s3_secret_name = os.getenv('S3_SECRET')
   service_account_email = os.getenv('JOB_SERVICE_ACCOUNT')
   machine = os.getenv('GCLOUD_MACHINE', "n1-standard-2")
@@ -201,7 +201,7 @@ def get_command(bucket, prefix, project_id, dragen_options, jarvice_options):
         f"service_account_email = {service_account_email},"
         f" machine = {machine}")
 
-  assert licence_secret, "LICENCE_SECRET unknown"
+  assert licence_secret, "LICENSE_SECRET unknown"
 
   jxe_app = jarvice_options.get('jxe_app',
                                 'illumina-dragen_4_0_3_13_g52a8599a')

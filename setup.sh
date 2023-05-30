@@ -158,22 +158,22 @@ else
 fi
 
 echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
-exists=$(gcloud secrets describe ${LICENCE_SECRET} 2> /dev/null)
+exists=$(gcloud secrets describe ${LICENSE_SECRET} 2> /dev/null)
 if [ -z "$exists" ]; then
-  $printf "Creating $LICENCE_SECRET secret..."  | tee -a "$LOG"
-  gcloud secrets create $LICENCE_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
+  $printf "Creating $LICENSE_SECRET secret..."  | tee -a "$LOG"
+  gcloud secrets create $LICENSE_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
 fi
-gcloud secrets versions add $LICENCE_SECRET --data-file="tmp/licsecret.json" | tee -a "$LOG"
+gcloud secrets versions add $LICENSE_SECRET --data-file="tmp/licsecret.json" | tee -a "$LOG"
 rm -rf tmp/licsecret.json # delete temp file
 
-LICENCE_SECRET=$(gcloud secrets versions access latest --secret="$LICENCE_SECRET" --project=$PROJECT_ID | jq ".access_secret" | tr -d '"')
-if [ -z "$LICENCE_SECRET" ] ; then
-  echo "$LICENCE_SECRET was not created properly" | tee -a "$LOG"
+LICENSE_SECRET=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
+if [ -z "$LICENSE_SECRET" ] ; then
+  echo "$LICENSE_SECRET was not created properly" | tee -a "$LOG"
   echo "Try running following command to debug:" | tee -a "$LOG"
-  echo "  gcloud secrets versions access latest --secret=$LICENCE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+  echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
   exit
 else
-  $printf "Successfully created $LICENCE_SECRET secret." | tee -a "$LOG"
+  $printf "Successfully created $LICENSE_SECRET secret." | tee -a "$LOG"
 fi
 # terraform
 #```shell
