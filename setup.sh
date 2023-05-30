@@ -166,11 +166,11 @@ fi
 gcloud secrets versions add $LICENSE_SECRET --data-file="tmp/licsecret.json" | tee -a "$LOG"
 rm -rf tmp/licsecret.json # delete temp file
 
-LICENSE_SECRET=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
-if [ -z "$LICENSE_SECRET" ] ; then
-  echo "$LICENSE_SECRET was not created properly" | tee -a "$LOG"
+LICENSE_SECRET_KEY=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
+if [ -z "$LICENSE_SECRET_KEY" ] ; then
+  echo "$LICENSE_SECRET_KEY was not created properly" | tee -a "$LOG"
   echo "Try running following command to debug:" | tee -a "$LOG"
-  echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+  echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
   exit
 else
   $printf "Successfully created $LICENSE_SECRET secret." | tee -a "$LOG"
