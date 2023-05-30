@@ -6,12 +6,19 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
 export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:dev"
 
+# Configuration
+export OUTPUT_BUCKET=${PROJECT_ID}-output #
+
+# System Config
+export TRIGGER_FILE_NAME="START_PIPELINE"
+
 # GCP
 export GCLOUD_PROJECT=$PROJECT_ID
 export GCLOUD_REGION=us-central1
 export GCLOUD_ZONE=us-central1-a
 export GCLOUD_IMAGE=atos-illumina-jxe-stub-rc
 export GCLOUD_IMAGE_PROJECT=atos-illumina-public
+export GCLOUD_BATCH_IMAGE_PROJECT=batch-custom-image
 export GCLOUD_MACHINE=n1-standard-2
 export GCLOUD_INSTANCE=dragen
 export BUCKET_NAME=${PROJECT_ID}-sample-data
@@ -28,23 +35,13 @@ export SA_EMAIL_STORAGE=${SA_NAME_STORAGE}@${PROJECT_ID}.iam.gserviceaccount.com
 export S3_SECRET="s3_hmac_secret_key"
 export LICENCE_SECRET="license_secret_key"
 
-# Cloud Function
+# Cloud Function Params
 export SOURCE_DIR="${DIR}/cloud_function"  # Cloud Function Directory - relative (main.py)
 export SOURCE_ENTRY_POINT='run_job' # Entry point for Cloud Function
 export RUNTIME='python37' # The only properly Supported for Runtime Environment
 export PUBSUB_COMMAND_TOPIC='dragen-trigger'
 export CLOUD_FUNCTION_NAME='run_dragen_job'
 export INPUT_BUCKET=${PROJECT_ID}-sample-data # used for triggering CF
-export OUTPUT_BUCKET=${PROJECT_ID}-output #
 export INGRESS_SETTINGS=internal-and-gclb
-
-# Input
-export ILLUMINA_INPUT1="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora"
-export ILLUMINA_INPUT2="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora"
-export ILLUMINA_R="s3://${BUCKET_NAME}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1"
-export ILLUMINA_ORA_REF="s3://${BUCKET_NAME}/references/lenadata"
-
-# System Config
-export TRIGGER_FILE_NAME="START_PIPELINE"
 
 echo "Using PROJECT_ID=$PROJECT_ID"

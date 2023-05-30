@@ -15,26 +15,53 @@
 # [START batch_create_script_job]
 import json
 import os
+import sys
 import uuid
 from google.cloud import batch_v1
 from google.cloud import secretmanager
 from google.cloud import storage
 from datetime import datetime
 
-## Config
-# "imageUri": "us-docker.pkg.dev/jarvice/images/illumina-dragen:$version",
-
-# imageUri = "gcr.io/google-containers/busybox"
-# entrypoint": "/bin/sh"
-# command = "echo Hello world! This is task ${BATCH_TASK_INDEX}. This job has a total of ${BATCH_TASK_COUNT} tasks."
-
-entrypoint = "/bin/bash"
-date_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-
 # API clients
-gcs = None    # cloud storage
-sm = None     # secret_manager
+gcs = None  # cloud storage
+sm = None  # secret_manager
 batch = None  # batch job client
+
+
+def load_config(bucketname, file_path):
+  print(f"load_config with bucket={bucketname}, file_path={file_path}")
+  file_name = os.path.basename(file_path)
+  global gcs
+  if not gcs:
+    gcs = storage.Client()
+
+  try:
+    if bucketname and gcs.get_bucket(bucketname).exists():
+      bucket = gcs.get_bucket(bucketname)
+      blob = bucket.blob(file_path)
+      if blob.exists():
+        data = json.loads(blob.download_as_text(encoding="utf-8"))
+        return data
+      else:
+        print(f"Warning: file_path = {file_path} does not exist inside {bucketname}. ")
+        if file_path != os.path.basename(file_path):
+          dir_path = "/".join(os.path.dirname(file_path).split("/")[:-1])
+          print(
+            f"Checking if {file_name} exists in the top level folder {dir_path}.")
+          if dir_path == "":
+            file_path = file_name
+          else:
+            file_path = f"{dir_path}/{file_name}"
+          return load_config(bucketname, file_path)
+        else:
+          print(f"Error: file does not exist")
+
+    else:
+      print(f"Error: bucket does not exist {bucketname}")
+  except Exception as e:
+    print(
+        f"Error: while obtaining file from GCS gs://{bucketname}/{file_path} {e}")
+  return {}
 
 
 def run_job(event, context):
@@ -57,7 +84,7 @@ def run_job(event, context):
   job_name = os.getenv('JOB_NAME_SHORT', "dragen-job")
   network = os.getenv('GCLOUD_NETWORK', "default")
   subnet = os.getenv('GCLOUD_SUBNET', "default")
-  image_uri = os.getenv('IMAGE_URI')
+
   trigger_file_name = os.getenv('TRIGGER_FILE_NAME', "START_PIPELINE")
   service_account_email = os.getenv('JOB_SERVICE_ACCOUNT')
   machine = os.getenv('GCLOUD_MACHINE', "n1-standard-2")
@@ -70,12 +97,12 @@ def run_job(event, context):
   # file=inputs/START_PIPELINE
   # bucket
   print(
-    f"Received GCS finalized event on bucket={bucket}, file_path={file_path} ")
+      f"Received GCS finalized event on bucket={bucket}, file_path={file_path} ")
   filename = os.path.basename(file_path)
 
   if filename != trigger_file_name:
     print(
-      f"Skipping action, since waiting for {trigger_file_name} to trigger pipe-line")
+        f"Skipping action, since waiting for {trigger_file_name} to trigger pipe-line")
     return
 
   dirs = os.path.dirname(file_path)
@@ -83,32 +110,45 @@ def run_job(event, context):
     input_path = f"s3://{bucket}"
   else:
     input_path = f"s3://{bucket}/{dirs}"
-  print(f"Triggering pipeline for input path = {input_path}")
+  print(f"Using data from input path = {input_path}")
+  prefix = ""
+  if dirs is not None and dirs != "":
+    prefix = dirs + "/"
 
-  command = get_command(bucket, file_path, project_id)
+  config = load_config(bucketname=bucket, file_path=f"{prefix}config.json")
+
+  dragen_options = config.get("dragen_options", {})
+  jarvice_options = config.get("jarvice_options", {})
+  image_uri = jarvice_options.get('image_uri',
+                                  'us-docker.pkg.dev/jarvice/images/illumina-dragen:dev')
+  entrypoint = jarvice_options.get('entrypoint', '/bin/bash')
+  command = get_command(bucket=bucket, prefix=prefix,
+                        project_id=project_id, dragen_options=dragen_options,
+                        jarvice_options=jarvice_options)
 
   print(command)
-  return
   return create_script_job(project_id=project_id, region=region,
                            job_name=job_name, network=network, subnet=subnet,
                            bucket=bucket,
                            service_account_email=service_account_email,
                            machine=machine, command=command,
-                           image_uri=image_uri)
+                           image_uri=image_uri, entrypoint=entrypoint)
 
 
 def get_reference_dir(bucket, prefix):
   global gcs
   if not gcs:
     gcs = storage.Client()
-  blob_list = gcs.list_blobs(bucket, prefix=f"{prefix}")
+
+  blob_list = gcs.list_blobs(bucket, prefix=prefix)
   for blob in blob_list:
     # TODO seems like a missing feature, cannot list subfolders inside a folder
     # Hence a hack below
-    dirs = os.path.dirname(blob.name).replace("references/", "").split("/")[0]
-    # print(dirs)
-    if dirs.startswith("hg38"):
-      return dirs
+    split = os.path.dirname(blob.name).split(f"{prefix}")
+    if len(split) > 1 and split[1].startswith("hg38"):
+      folder = split[1].split("/")[0]
+      return folder
+
   return None
 
 
@@ -117,11 +157,12 @@ def find_file(bucket, prefix, name_filter):
   if not gcs:
     gcs = storage.Client()
   blob_list = gcs.list_blobs(bucket, prefix=f"{prefix}")
-
+  print(f"Using bucket={bucket} prefix={prefix}")
   files = [(blob.name, blob.updated.strftime("%Y-%m-%d %H:%M:%S.%f"))
            for blob in blob_list if name_filter(blob.name)]
 
-  files.sort(key=lambda date: datetime.strptime(date[1], "%Y-%m-%d %H:%M:%S.%f"))
+  files.sort(
+    key=lambda date: datetime.strptime(date[1], "%Y-%m-%d %H:%M:%S.%f"))
   if len(files) == 0:
     return None
 
@@ -132,13 +173,14 @@ def find_file(bucket, prefix, name_filter):
   return files[0][0]
 
 
-def get_command(bucket, file_path, project_id):
+#path can be 'empty' or "/something
+def get_command(bucket, prefix, project_id, dragen_options, jarvice_options):
+  print(f"prefix={prefix}")
   region = os.getenv('GCLOUD_REGION', "us-central1")
   job_name = os.getenv('JOB_NAME_SHORT', "dragen-job")
   network = os.getenv('GCLOUD_NETWORK', "default")
   subnet = os.getenv('GCLOUD_SUBNET', "default")
-  jxe_app = os.getenv('JXE_APP')
-  output = os.getenv('OUTPUT_BUCKET', f"{bucket}/output")
+
   licence_secret = os.getenv('LICENCE_SECRET')
   s3_secret_name = os.getenv('S3_SECRET')
   service_account_email = os.getenv('JOB_SERVICE_ACCOUNT')
@@ -150,15 +192,10 @@ def get_command(bucket, file_path, project_id):
         f"service_account_email = {service_account_email},"
         f" machine = {machine}")
 
-  assert jxe_app, "JXE_APP unknown"
   assert licence_secret, "LICENCE_SECRET unknown"
 
-  dirs = os.path.dirname(file_path)
-  if dirs == "":
-    input_path = f"s3://{bucket}"
-  else:
-    input_path = f"s3://{bucket}/{dirs}"
-  print(f"Triggering pipeline for input path = {input_path}")
+  jxe_app = jarvice_options.get('jxe_app',
+                                'illumina-dragen_4_0_3_13_g52a8599a')
 
   s3_secret_value = get_secret_value(s3_secret_name, project_id)
   assert s3_secret_value, "Could not retrieve S3_SECRET name"
@@ -181,23 +218,25 @@ def get_command(bucket, file_path, project_id):
   assert illumina_license, "Could not retrieve illumina_license"
   print(f"access_key={access_key}, access_secret={access_secret}")
 
-  prefix = ""
-  if dirs is not None and dirs != "":
-    prefix = dirs + "/"
-
-  print(f"Using gs://{bucket}/{prefix}input to search for R1 and R2 .ora files")
   prefix_r12 = f"{prefix}inputs/"
-  r1_input = find_file(bucket, prefix_r12, lambda x: x.endswith(".ora") and "r1" in x.lower())
+  print(f"Using gs://{bucket}/{prefix_r12} to search for R1 and R2 .ora files")
+  r1_input = find_file(bucket, prefix_r12,
+                       lambda x: x.endswith(".ora") and "r1" in x.lower())
   assert r1_input, f"Could not find R1 .ora file inside gs://{bucket}/{prefix_r12}"
 
-  r2_input = find_file(bucket, prefix_r12, lambda x: x.endswith(".ora") and "r2" in x.lower())
+  r2_input = find_file(bucket, prefix_r12,
+                       lambda x: x.endswith(".ora") and "r2" in x.lower())
   assert r2_input, f"Could not find R2 .ora file inside gs://{bucket}/{prefix_r12}"
 
-  prefix_ref = f"{prefix}references"
+  prefix_ref = f"{prefix}references/"
+  print(f"Using gs://{bucket}/{prefix_ref} to search for hg38 reference folder")
   reference = get_reference_dir(bucket, f"{prefix_ref}")
   assert reference, f"Could not find reference directory inside gs://{bucket}/{prefix_ref}"
 
   print(f"r1_input={r1_input}, r2_input={r2_input}, reference={reference}")
+  date_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+  output_default = f"s3://{bucket}/output"
+
   command = f"jarvice-dragen-stub.sh " \
             f"--project {project_id} " \
             f"--network {network} " \
@@ -209,37 +248,38 @@ def get_command(bucket, file_path, project_id):
             f"--s3-secret-key {access_secret} " \
             f"-- " \
             f"-f " \
-            f"-1 {r1_input} " \
-            f"-2 {r2_input} " \
-            f"--RGID HG002 " \
-            f"--RGSM HG002 " \
-            f"--ora-reference {input_path}/references/lenadata " \
-            f"-r {input_path}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1 " \
-            f"--enable-map-align true " \
-            f"--enable-map-align-output true " \
-            f"--enable-duplicate-marking true " \
-            f"--output-format CRAM " \
-            f"--enable-variant-caller true " \
-            f"--enable-vcf-compression true " \
-            f"--vc-emit-ref-confidence GVCF " \
-            f"--vc-enable-vcf-output true " \
-            f"--enable-cnv true " \
-            f"--cnv-enable-self-normalization true " \
-            f"--cnv-segmentation-mode slm " \
-            f"--enable-cyp2d6 true " \
-            f"--enable-cyp2b6 true " \
-            f"--enable-gba true " \
-            f"--enable-smn true " \
-            f"--enable-star-allele true " \
-            f"--enable-sv true " \
-            f"--repeat-genotype-enable true " \
-            f"--repeat-genotype-use-catalog expanded " \
-            f"--output-file-prefix HG002_pure " \
-            f"--output-directory {output}/{date_str} " \
-            f"--intermediate-results-dir /tmp/whole_genome/temp " \
-            f"--logging-to-output-dir true " \
-            f"--syslogging-to-output-dir true " \
+            f"-1 s3://{bucket}/{r1_input} " \
+            f"-2 s3://{bucket}/{r2_input} " \
+            f"--RGID {dragen_options.get('RGID', 'HG002')} " \
+            f"--RGSM {dragen_options.get('RGSM', 'HG002')} " \
+            f"--ora-reference s3://{bucket}/{prefix}{dragen_options.get('ora-reference', 'references/lenadata')} " \
+            f"-r s3://{bucket}/{prefix}references/{reference} " \
+            f"--enable-map-align {dragen_options.get('enable-map-align', 'true')} " \
+            f"--enable-map-align-output {dragen_options.get('enable-map-align-output', 'true')} " \
+            f"--enable-duplicate-marking {dragen_options.get('enable-duplicate-marking', 'true')} " \
+            f"--output-format  {dragen_options.get('output-format', 'CRAM')} " \
+            f"--enable-variant-caller {dragen_options.get('enable-variant-caller', 'true')} " \
+            f"--enable-vcf-compression {dragen_options.get('enable-vcf-compression', 'true')} " \
+            f"--vc-emit-ref-confidence {dragen_options.get('vc-emit-ref-confidence', 'GVCF')} " \
+            f"--vc-enable-vcf-output {dragen_options.get('vc-enable-vcf-output', 'true')} " \
+            f"--enable-cnv  {dragen_options.get('enable-cnv', 'true')} " \
+            f"--cnv-enable-self-normalization {dragen_options.get('cnv-enable-self-normalization', 'true')} " \
+            f"--cnv-segmentation-mode  {dragen_options.get('cnv-segmentation-mode', 'slm')} " \
+            f"--enable-cyp2d6 {dragen_options.get('enable-cyp2d6', 'true')} " \
+            f"--enable-cyp2b6 {dragen_options.get('enable-cyp2b6', 'true')} " \
+            f"--enable-gba {dragen_options.get('enable-gba', 'true')} " \
+            f"--enable-smn {dragen_options.get('enable-smn', 'true')} " \
+            f"--enable-star-allele {dragen_options.get('enable-star-allele', 'true')} " \
+            f"--enable-sv {dragen_options.get('enable-sv', 'true')} " \
+            f"--repeat-genotype-enable {dragen_options.get('repeat-genotype-enable', 'true')} " \
+            f"--repeat-genotype-use-catalog  {dragen_options.get('repeat-genotype-use-catalog', 'expanded')} " \
+            f"--output-file-prefix  {dragen_options.get('output-file-prefix', 'HG002_pure')} " \
+            f"--output-directory  {dragen_options.get('output-directory', output_default)}/{prefix}{date_str} "  \
+            f"--intermediate-results-dir {dragen_options.get('intermediate-results-dir', '/tmp/whole_genome/temp')} " \
+            f"--logging-to-output-dir {dragen_options.get('logging-to-output-dir', 'true')} " \
+            f"--syslogging-to-output-dir {dragen_options.get('syslogging-to-output-dir', 'true')} " \
             f"--lic-server https://{illumina_license}@license.edicogenome.com"
+  print(command)
   return command
 
 
@@ -258,7 +298,7 @@ def get_secret_value(secret_name, project_id):
 
 def create_script_job(project_id: str, region: str, network: str,
     subnet: str, job_name: str, bucket: str, service_account_email: str,
-    machine: str, image_uri: str, command: str) -> batch_v1.Job:
+    machine: str, image_uri: str, command: str, entrypoint: str) -> batch_v1.Job:
   """
     This method shows how to create a sample Batch Job that will run
     a simple command on Cloud Compute instances.
@@ -273,7 +313,6 @@ def create_script_job(project_id: str, region: str, network: str,
     Returns:
         A job object representing the job created.
     """
-
 
   # Define what will be done as part of the job.
   runnable = batch_v1.Runnable()
@@ -352,16 +391,24 @@ def create_script_job(project_id: str, region: str, network: str,
   create_request.parent = f"projects/{project_id}/locations/{region}"
 
   print(
-    f"Submitting {job_name} to run script on input data inside gs://{bucket}")
+      f"Submitting {job_name} to run script on input data inside gs://{bucket}")
 
   global batch
   if not batch:
     batch = batch_v1.BatchServiceClient()
 
-  return batch.create_job(create_request)
+  # return batch.create_job(create_request)
   # [END batch_create_script_job]
 
 
 if __name__ == "__main__":
-  run_job({'bucket': 'illumina-dragen-sample-data',
-           'name': 'START_PIPELINE', }, None)
+  name = "START_PIPELINE"
+  if len(sys.argv) > 1:
+    name = f"{sys.argv[1]}/START_PIPELINE"
+
+  project_id = os.environ.get("GCP_PROJECT",
+                              os.environ.get("PROJECT_ID", ""))
+  bucket = f'{project_id}-sample-data'
+  print(f"Using file_name={name}, bucket={bucket}")
+  run_job({'bucket': bucket,
+           'name': name, }, None)

@@ -5,7 +5,13 @@ source "${DIR}"/SET
 
 SCRIPT=$1
 
-#Retrieving Secrets
+# Hard-coded Input files
+export ILLUMINA_INPUT1="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora"
+export ILLUMINA_INPUT2="s3://${BUCKET_NAME}/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora"
+export ILLUMINA_R="s3://${BUCKET_NAME}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1"
+export ILLUMINA_ORA_REF="s3://${BUCKET_NAME}/references/lenadata"
+
+# Retrieving Secrets
 export S3_ACCESS_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_key" | tr -d '"')
 export S3_SECRET_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_secret" | tr -d '"')
 export ILLUMINA_LICENSE=$(gcloud secrets versions access latest --secret="$LICENCE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
