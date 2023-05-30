@@ -37,9 +37,10 @@ def load_config(bucketname, file_path):
 
   try:
     if bucketname and gcs.get_bucket(bucketname).exists():
-      bucket = gcs.get_bucket(bucketname)
-      blob = bucket.blob(file_path)
+      buc = gcs.get_bucket(bucketname)
+      blob = buc.blob(file_path)
       if blob.exists():
+        print(f"loading {file_path}...")
         data = json.loads(blob.download_as_text(encoding="utf-8"))
         return data
       else:
