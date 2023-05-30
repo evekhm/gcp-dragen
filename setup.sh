@@ -64,12 +64,17 @@ while [ -z "$enabled" ]; do
   sleep 5;
 done
 
-$printf "Setting Org Policies..."  | tee -a "$LOG"
+$printf "Setting Policy Constraints..."  | tee -a "$LOG"
+gcloud org-policies reset constraints/iam.disableServiceAccountCreation --project=$PROJECT_ID
 gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
 gcloud org-policies reset constraints/compute.requireShieldedVm --project=$PROJECT_ID
 gcloud org-policies reset constraints/storage.restrictAuthTypes --project=$PROJECT_ID
-sleep 15 # Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
+
+echo "Allow upto 30 seconds to Propagate the policy changes"
+sleep 30
+echo "Policy Changes done"
+# Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
 
 ready=$(gcloud org-policies describe constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID 2>/dev/null)
 while [ -z "$ready" ]; do
