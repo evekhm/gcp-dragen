@@ -69,7 +69,7 @@ gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --pro
 gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
 gcloud org-policies reset constraints/compute.requireShieldedVm --project=$PROJECT_ID
 gcloud org-policies reset constraints/storage.restrictAuthTypes --project=$PROJECT_ID
-sleep 10 # Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
+sleep 15 # Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
 
 ready=$(gcloud org-policies describe constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID 2>/dev/null)
 while [ -z "$ready" ]; do

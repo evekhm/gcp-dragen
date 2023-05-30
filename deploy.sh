@@ -1,4 +1,5 @@
 #!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$DIR/utils/print"
 gcloud config set project $PROJECT_ID
 

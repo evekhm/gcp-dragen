@@ -1,5 +1,6 @@
 ## Create GCP Environment for DRAGEN
 
+
 ### Pre-requisites
 
 Following licenses and keys are required to operate this solution:
@@ -27,7 +28,7 @@ Following licenses and keys are required to operate this solution:
   ```shell
   ./setup.sh
   ```
-> Command will take ~ 4.5 minutes and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
+> Command will take ~ 5 minutes and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
  
 
 ### Upload Required Input Data
