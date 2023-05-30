@@ -102,7 +102,7 @@ def run_dragen_job(event, context):
 
   if filename != trigger_file_name:
     print(
-        f"Skipping action, since waiting for {trigger_file_name} to trigger pipe-line")
+        f"Skipping action on {filename}, since waiting for {trigger_file_name} to trigger pipe-line")
     return
 
   dirs = os.path.dirname(file_path)
@@ -118,9 +118,16 @@ def run_dragen_job(event, context):
   config = load_config(bucketname=bucket, file_path=f"{prefix}config.json")
 
   dragen_options = config.get("dragen_options", {})
-  print(f"dragen_options={dragen_options}")
+  if dragen_options == {}:
+    print(f"Error: dragen_options could not be retrieved, will be using hard-coded default values.")
+  else:
+    print(f"dragen_options={dragen_options}")
   jarvice_options = config.get("jarvice_options", {})
-  print(f"jarvice_options={jarvice_options}")
+  if jarvice_options == {}:
+    print(f"Error: jarvice_options could not be retrieved, will be using hard-coded default values.")
+  else:
+    print(f"jarvice_options={jarvice_options}")
+
   image_uri = jarvice_options.get('image_uri',
                                   'us-docker.pkg.dev/jarvice/images/illumina-dragen:dev')
   entrypoint = jarvice_options.get('entrypoint', '/bin/bash')
@@ -238,7 +245,8 @@ def get_command(bucket, prefix, project_id, dragen_options, jarvice_options):
   print(f"r1_input={r1_input}, r2_input={r2_input}, reference={reference}")
   date_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
   output_default = f"s3://{bucket}/output"
-
+  output = dragen_options.get('output-directory', output_default)
+  print(f"====DEBUG {output}")
   command = f"jarvice-dragen-stub.sh " \
             f"--project {project_id} " \
             f"--network {network} " \

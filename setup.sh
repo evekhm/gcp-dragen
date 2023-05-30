@@ -238,6 +238,14 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
          --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/secretmanager.secretAccessor"
 
+# To load config.json
+gcloud storage buckets add-iam-policy-binding  gs://"${INPUT_BUCKET_NAME}" --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" --role="roles/storage.objectViewer"  2>&1
+gcloud storage buckets add-iam-policy-binding  gs://"${OUTPUT_BUCKET_NAME}" --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" --role="roles/storage.objectViewer"  2>&1
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+         --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
+         --role="roles/storage.objectViewer"
+
+roles/storage.objectViewer
 $printf "Preparing config.json file" | tee -a "$LOG"
 sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
