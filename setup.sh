@@ -1,10 +1,10 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
+printf="$DIR/utils/print"
 LOG="$DIR/setup.log"
 filename=$(basename $0)
 timestamp=$(date +"%m-%d-%Y_%H:%M:%S")
-echo "$timestamp - Running $filename ... " | tee "$LOG"
+$printf "$timestamp - Running $filename ... " | tee "$LOG"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo PROJECT_ID variable is not set. | tee -a "$LOG"
@@ -33,7 +33,7 @@ source "${DIR}"/SET
 # gcloud services list --enabled|grep -v NAME|wc -l
 
 # Enable APIs
-echo "Enabling Required APIs..."  | tee -a "$LOG"
+$printf "Enabling Required APIs..."  | tee -a "$LOG"
 
   APIS="compute.googleapis.com \
     pubsub.googleapis.com \
@@ -64,12 +64,18 @@ while [ -z "$enabled" ]; do
   sleep 5;
 done
 
-echo "Setting Org Policies..."  | tee -a "$LOG"
-gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
+$printf "Setting Org Policies..."  | tee -a "$LOG"
 gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID
+gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJECT_ID
 gcloud org-policies reset constraints/compute.requireShieldedVm --project=$PROJECT_ID
 gcloud org-policies reset constraints/storage.restrictAuthTypes --project=$PROJECT_ID
 sleep 10 # Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
+
+ready=$(gcloud org-policies describe constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID 2>/dev/null)
+while [ -z "$ready" ]; do
+  ready=$(gcloud org-policies describe constraints/iam.disableServiceAccountKeyCreation --project=$PROJECT_ID 2>/dev/null)
+  sleep 5;
+done
 
 gcloud resource-manager org-policies describe    compute.trustedImageProjects --project=$PROJECT_ID    --effective > policy.yaml
 echo "  - projects/illumina-dragen" >> policy.yaml
@@ -79,11 +85,11 @@ gcloud resource-manager org-policies set-policy \
    policy.yaml --project=$PROJECT_ID
 rm  policy.yaml
 
-echo "Finished with Org policy Update"  | tee -a "$LOG"
+$printf "Finished with Org policy Update"  INFO | tee -a "$LOG"
 
 network=$(gcloud compute networks list --filter="name=(\"$GCLOUD_NETWORK\" )" --format='get(NAME)' 2>/dev/null)
 if [ -z "$network" ]; then
-  echo "Creating Network $GCLOUD_NETWORK ..."  | tee -a "$LOG"
+  $printf "Creating Network $GCLOUD_NETWORK ..."  | tee -a "$LOG"
   gcloud compute networks create "$GCLOUD_NETWORK" --project="$PROJECT_ID" --subnet-mode=custom \
   --mtu=1460 --bgp-routing-mode=regional
 
@@ -99,14 +105,14 @@ fi
 gsutil ls "gs://${BUCKET_NAME}" 2> /dev/null
 RETURN=$?
 if [[ $RETURN -gt 0 ]]; then
-    echo "Creating GCS Bucket gs://${TF_BUCKET_NAME}..."  | tee -a "$LOG"
+    $printf "Creating GCS Bucket gs://${TF_BUCKET_NAME}..."  | tee -a "$LOG"
     gsutil mb gs://$BUCKET_NAME
 fi
 
 
 SA_EXISTS=$(gcloud iam service-accounts list --filter="${SA_NAME_STORAGE}" | wc -l)
 if [ $SA_EXISTS = "0" ]; then
-  echo "Creating service account ${SA_NAME_STORAGE}..."  | tee -a "$LOG"
+  $printf "Creating service account ${SA_NAME_STORAGE}..."  | tee -a "$LOG"
   gcloud iam service-accounts create $SA_NAME_STORAGE \
           --description="Storage Admin" \
           --display-name="storage-admin"
@@ -117,7 +123,7 @@ fi
 
 [ ! -d "$DIR/tmp" ] && mkdir "$DIR/tmp"
 
-echo "Creating HMAC keys..."  | tee -a "$LOG"
+$printf "Creating HMAC keys..."  | tee -a "$LOG"
 gsutil hmac create "$SA_EMAIL_STORAGE" > tmp/hmackey.txt
 access_key=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $1}'`
 access_secret=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $2}'`
@@ -125,7 +131,7 @@ echo "{\"access_key\": \"${access_key}\",  \"access_secret\": \"${access_secret}
 
 exists=$(gcloud secrets describe ${S3_SECRET} 2> /dev/null)
 if [ -z "$exists" ]; then
-  echo "Creating ${S3_SECRET} secret..."  | tee -a "$LOG"
+  $printf "Creating ${S3_SECRET} secret..."  | tee -a "$LOG"
   gcloud secrets create $S3_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
 fi
 gcloud secrets versions add $S3_SECRET --data-file="tmp/hmacsecret.json" | tee -a "$LOG"
@@ -145,7 +151,7 @@ fi
 echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
 exists=$(gcloud secrets describe ${LICENCE_SECRET} 2> /dev/null)
 if [ -z "$exists" ]; then
-  echo "Creating $LICENCE_SECRET secret..."  | tee -a "$LOG"
+  $printf "Creating $LICENCE_SECRET secret..."  | tee -a "$LOG"
   gcloud secrets create $LICENCE_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
 fi
 gcloud secrets versions add $LICENCE_SECRET --data-file="tmp/licsecret.json" | tee -a "$LOG"
@@ -153,12 +159,12 @@ rm -rf tmp/licsecret.json # delete temp file
 
 LICENCE_SECRET=$(gcloud secrets versions access latest --secret="$LICENCE_SECRET" --project=$PROJECT_ID | jq ".access_secret" | tr -d '"')
 if [ -z "$LICENCE_SECRET" ] ; then
-  echo "$LICENCE_SECRET was not created properly"
-  echo "Try running following command to debug:"
-  echo "  gcloud secrets versions access latest --secret=$LICENCE_SECRET --project=$PROJECT_ID "
+  echo "$LICENCE_SECRET was not created properly" | tee -a "$LOG"
+  echo "Try running following command to debug:" | tee -a "$LOG"
+  echo "  gcloud secrets versions access latest --secret=$LICENCE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
   exit
 else
-  echo "Successfully created $LICENCE_SECRET secret."
+  $printf "Successfully created $LICENCE_SECRET secret." | tee -a "$LOG"
 fi
 # terraform
 #```shell
@@ -175,7 +181,7 @@ fi
 
 SA_EXISTS=$(gcloud iam service-accounts list --filter="${SA_JOB_NAME}" | wc -l)
 if [ $SA_EXISTS = "0" ]; then
-  echo "Creating ${SA_JOB_NAME} Service Account to execute Batch Job"  | tee -a "$LOG"
+  $printf "Creating ${SA_JOB_NAME} Service Account to execute Batch Job"  | tee -a "$LOG"
   gcloud iam service-accounts create $SA_JOB_NAME \
           --description="Service Account to execute batch Job" \
           --display-name=$SA_JOB_NAME | tee -a "$LOG"
@@ -223,7 +229,7 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
          --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/secretmanager.secretAccessor"
 
-echo "Preparing config.json file" | tee -a "$LOG"
+$printf "Preparing config.json file" | tee -a "$LOG"
 sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
@@ -234,7 +240,7 @@ gsutil cp "${DIR}/cloud_function/config.json" gs://"$BUCKET_NAME"/ | tee -a "$LO
 
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 
-echo "Success! Infrastructure deployed and ready!"  | tee -a "$LOG"
+$printf "Success! Infrastructure deployed and ready!"  | tee -a "$LOG"
 echo "Next steps:"  | tee -a "$LOG"
 echo " > Upload data to gs://$BUCKET_NAME/<your_folder>:"  | tee -a "$LOG"
 echo " -- R1x.ora into  gs://${BUCKET_NAME}/<your_folder>/inputs/xxR1xxx.ora"  | tee -a "$LOG"

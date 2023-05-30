@@ -1,10 +1,11 @@
 #!/bin/bash
+printf="$DIR/utils/print"
 gcloud config set project $PROJECT_ID
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
   source "${DIR}"/SET
 
-echo "Deploying Cloud Function=[$SOURCE_ENTRY_POINT]..."
+$printf "Deploying Cloud Function=[$SOURCE_ENTRY_POINT]..."
 gcloud functions deploy $CLOUD_FUNCTION_NAME \
     --region=$GCLOUD_REGION \
     --runtime $RUNTIME --source="${SOURCE_DIR}" \
