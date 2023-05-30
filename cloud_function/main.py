@@ -118,7 +118,9 @@ def run_dragen_job(event, context):
   config = load_config(bucketname=bucket, file_path=f"{prefix}config.json")
 
   dragen_options = config.get("dragen_options", {})
+  print(f"dragen_options={dragen_options}")
   jarvice_options = config.get("jarvice_options", {})
+  print(f"jarvice_options={jarvice_options}")
   image_uri = jarvice_options.get('image_uri',
                                   'us-docker.pkg.dev/jarvice/images/illumina-dragen:dev')
   entrypoint = jarvice_options.get('entrypoint', '/bin/bash')
