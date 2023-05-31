@@ -80,6 +80,17 @@ Following licenses and keys are required to operate this solution:
   ```
 > Command will take ~ 5 minutes and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
  
+This command executes following steps:
+* Enables required APIs
+* Sets required constraints
+* Creates Network/Subnet and required Firewall rules
+* Creates GCS Bucket for input and output
+* Creates HMAC keys (stores as GCP secrets)
+* Creates Secrets with License keys (stores as GCP secrets)
+* Creates Service Account with required permissions to run the Batch Job
+* Uploads `config.json`  with  Jarvice and Dragen options
+* Deploys Cloud Function - to trigger batch Job on GCS event
+
 
 ## Upload Required Data
 
@@ -107,12 +118,17 @@ Following licenses and keys are required to operate this solution:
 ## Trigger the pipeline
 
 ### Directly from GCS
-Drop empty file named `START_PIPELINE` inside `gs://${PROJECT_ID}-input/[your_folder]`
+Drop empty file named `START_PIPELINE` (`cloud_function/START_PIPELINE`) inside `gs://${PROJECT_ID}-input/[your_folder]`
 
 ### From shell
 Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder]` directory:
 ```shell
 ./start_pipeline.sh your_folder
+```
+
+Alternatively, without [you_folder] it will drop to the input root:
+```shell
+./start_pipeline.sh
 ```
 
 ## Configuration
@@ -122,7 +138,6 @@ This file can be modified in order to adjust the pipeline execution.
 If the job is triggered inside a sub-directory, for example: `gs://$PROJECT_ID-input/john/test-run1`
 (by uploading `START_PIPELINE` into the `gs://$PROJECT_ID-input/john/test-run1` directory), then system will first check if there is a local `config.json` file present.
 If not, it will check a parent directory, until it reaches the top `gs://$PROJECT_ID-input`. This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
-
 
 
 ## References
