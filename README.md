@@ -15,11 +15,11 @@
 This is a solution using GCP Cloud Storage -> Pub/Sub -> Cloud Function -> Batch API to trigger execution of the Dragen Software on FPGA dedicated hardware.
 
 It offers a simplified user experience:
-* Easy provisioning of the infrustructure
+* Easy provisioning of the infrastructure
 * Easy way to trigger pipeline execution, by dropping an empty file called START_PIPELINE into the Cloud Storage bucket with required input data.
   * The Pipeline execution can be configured by changing config.json file inside the  gs://$PROJECT_ID-input directory
 
-
+![](docs/ArchitectureOverview.png)
 ## Create GCP Environment for DRAGEN
 
 
@@ -138,6 +138,25 @@ This file can be modified in order to adjust the pipeline execution.
 If the job is triggered inside a sub-directory, for example: `gs://$PROJECT_ID-input/john/test-run1`
 (by uploading `START_PIPELINE` into the `gs://$PROJECT_ID-input/john/test-run1` directory), then system will first check if there is a local `config.json` file present.
 If not, it will check a parent directory, until it reaches the top `gs://$PROJECT_ID-input`. This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
+
+## Troubleshooting
+
+### Exhausting ssh login profile
+#### Error
+```shell
+ERROR: (gcloud.compute.ssh) INVALID_ARGUMENT: Login profile size exceeds 32 KiB. Delete profile values to make additional space.
+```
+![](docs/error.png)
+#### Resolution
+
+Clean up service account ssh keys:
+
+```shell
+./utils/cleanup_keys.sh
+```
+
+The command above will activate service account and clean up its keys.
+
 
 
 ## References
