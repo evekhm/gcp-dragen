@@ -2,7 +2,8 @@
     "dragen_options": {
       "RGID": "HG002",
       "RGSM": "HG002",
-      "ora-reference": "references/lenadata",
+      "ora-reference": "s3://__IN_BUCKET__/references/lenadata",
+      "reference": "s3://__IN_BUCKET__/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1",
       "enable-map-align": "true",
       "enable-map-align-output": "true",
       "enable-duplicate-marking": "true",

@@ -23,7 +23,7 @@ from google.cloud import storage
 from datetime import datetime
 
 # API clients
-gcs = None  # cloud storage
+gcs = storage.Client()  # cloud storage
 sm = None  # secret_manager
 batch = None  # batch job client
 
@@ -31,9 +31,6 @@ batch = None  # batch job client
 def load_config(bucketname, file_path):
   print(f"load_config with bucket={bucketname}, file_path={file_path}")
   file_name = os.path.basename(file_path)
-  global gcs
-  if not gcs:
-    gcs = storage.Client()
 
   try:
     if bucketname and gcs.get_bucket(bucketname).exists():
@@ -146,10 +143,6 @@ def run_dragen_job(event, context):
 
 
 def get_reference_dir(bucket, prefix):
-  global gcs
-  if not gcs:
-    gcs = storage.Client()
-
   blob_list = gcs.list_blobs(bucket, prefix=prefix)
   for blob in blob_list:
     # TODO seems like a missing feature, cannot list subfolders inside a folder
@@ -162,10 +155,29 @@ def get_reference_dir(bucket, prefix):
   return None
 
 
+def directory_exists(bucket_name, dir_name):
+  if bucket_name:
+    gcs_bucket = gcs.get_bucket(bucket_name)
+    print(f"eee {gcs_bucket}")
+    return gcs_bucket.exists(dir_name)
+  return False
+
+
+def get_ora_files(bucket_name, dir_name):
+  print(f"bucket_name={bucket_name}, dir_name={dir_name}")
+  ora_files = []
+  for b in gcs.list_blobs(bucket_name, prefix=f"{dir_name}"):
+    if b.name.lower().endswith(".ora"):
+      ora_files.append(b.name)
+
+  assert len(ora_files) != 0, f"No ora files detected inside {bucket_name}/{dir_name}"
+  result = ""
+  for index, ora_file in enumerate(ora_files):
+    result = result + f" -{index + 1} s3://{bucket_name}/{ora_file} "
+  return result
+
+
 def find_file(bucket, prefix, name_filter):
-  global gcs
-  if not gcs:
-    gcs = storage.Client()
   blob_list = gcs.list_blobs(bucket, prefix=f"{prefix}")
   print(f"Using bucket={bucket} prefix={prefix}")
   files = [(blob.name, blob.updated.strftime("%Y-%m-%d %H:%M:%S.%f"))
@@ -228,26 +240,15 @@ def get_command(bucket, prefix, project_id, dragen_options, jarvice_options):
   assert illumina_license, "Could not retrieve illumina_license"
   print(f"access_key={access_key}, access_secret={access_secret}")
 
-  prefix_r12 = f"{prefix}inputs/"
-  print(f"Using gs://{bucket}/{prefix_r12} to search for R1 and R2 .ora files")
-  r1_input = find_file(bucket, prefix_r12,
-                       lambda x: x.endswith(".ora") and "r1" in x.lower())
-  assert r1_input, f"Could not find R1 .ora file inside gs://{bucket}/{prefix_r12}"
+  ora_inputs = get_ora_files(bucket_name=bucket, dir_name=prefix)
 
-  r2_input = find_file(bucket, prefix_r12,
-                       lambda x: x.endswith(".ora") and "r2" in x.lower())
-  assert r2_input, f"Could not find R2 .ora file inside gs://{bucket}/{prefix_r12}"
-
-  prefix_ref = f"{prefix}references/"
-  print(f"Using gs://{bucket}/{prefix_ref} to search for hg38 reference folder")
-  reference = get_reference_dir(bucket, f"{prefix_ref}")
-  assert reference, f"Could not find reference directory inside gs://{bucket}/{prefix_ref}"
-
-  print(f"r1_input={r1_input}, r2_input={r2_input}, reference={reference}")
   date_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
   output_default = f"s3://{bucket}/output"
-  output = dragen_options.get('output-directory', output_default)
-  print(f"====DEBUG {output}")
+
+  lenadata_path = dragen_options.get('ora-reference', f"s3://{bucket}/references/lenadataXX")
+  reference_path = dragen_options.get('reference', f"s3://{bucket}/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1XX")
+
+  print(f"ora_inputs={ora_inputs}, reference_path={reference_path}, lenadata_path={lenadata_path}")
   command = f"jarvice-dragen-stub.sh " \
             f"--project {project_id} " \
             f"--network {network} " \
@@ -258,13 +259,11 @@ def get_command(bucket, prefix, project_id, dragen_options, jarvice_options):
             f"--s3-access-key {access_key} " \
             f"--s3-secret-key {access_secret} " \
             f"-- " \
-            f"-f " \
-            f"-1 s3://{bucket}/{r1_input} " \
-            f"-2 s3://{bucket}/{r2_input} " \
+            f"-f {ora_inputs}" \
             f"--RGID {dragen_options.get('RGID', 'HG002')} " \
             f"--RGSM {dragen_options.get('RGSM', 'HG002')} " \
-            f"--ora-reference s3://{bucket}/{prefix}{dragen_options.get('ora-reference', 'references/lenadata')} " \
-            f"-r s3://{bucket}/{prefix}references/{reference} " \
+            f"--ora-reference {lenadata_path} " \
+            f"-r {reference_path} " \
             f"--enable-map-align {dragen_options.get('enable-map-align', 'true')} " \
             f"--enable-map-align-output {dragen_options.get('enable-map-align-output', 'true')} " \
             f"--enable-duplicate-marking {dragen_options.get('enable-duplicate-marking', 'true')} " \

@@ -4,9 +4,9 @@ source "$DIR/SET"
 
 FOLDER=$1
 if [ -z "$FOLDER" ]; then
-  DEST="gs://${INPUT_BUCKET}/"
+  DEST="gs://${INPUT_BUCKET_NAME}/"
 else
-  DEST="gs://${INPUT_BUCKET}/${FOLDER}/"
+  DEST="gs://${INPUT_BUCKET_NAME}/${FOLDER}/"
 fi
 
 echo "Triggering Pipeline for $DEST"

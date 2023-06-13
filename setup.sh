@@ -252,6 +252,7 @@ sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
     s|__JXE_APP__|'"$JXE_APP"'|g;
     s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
+    s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
     ' "${DIR}/cloud_function/config.sample.json" > "${DIR}/cloud_function/config.json"
 
 gsutil cp "${DIR}/cloud_function/config.json" gs://"$INPUT_BUCKET_NAME"/ | tee -a "$LOG"
@@ -260,11 +261,8 @@ bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 
 $printf "Success! Infrastructure deployed and ready!"  | tee -a "$LOG"
 echo "Next steps:"  | tee -a "$LOG"
-echo " > Upload data to gs://$INPUT_BUCKET_NAME/<your_folder>:"  | tee -a "$LOG"
-echo " -- R1x.ora into  gs://${INPUT_BUCKET_NAME}/<your_folder>/inputs/xxR1xxx.ora"  | tee -a "$LOG"
-echo " -- R2x.ora into  gs://${INPUT_BUCKET_NAME}/<your_folder>/inputs/xxxR2xxx.ora"  | tee -a "$LOG"
-echo " -- Reference data gs://${INPUT_BUCKET_NAME}/<your_folder>/references/h38xxxx"  | tee -a "$LOG"
-echo " -- lenadata inside gs://${INPUT_BUCKET_NAME}/<your_folder>/references/lenadata"  | tee -a "$LOG"
+echo " > Upload Required ORA files into gs://$INPUT_BUCKET_NAME/<your_folder>:"  | tee -a "$LOG"
+echo " > Set reference data via gs://$INPUT_BUCKET_NAME/config.json"  | tee -a "$LOG"
 
 echo " > Start the pipeline: "  | tee -a "$LOG"
 echo "Drop empty file named START_PIPELINE inside gs://${INPUT_BUCKET_NAME}/<your_folder>"  | tee -a "$LOG"

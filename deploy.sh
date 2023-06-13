@@ -22,7 +22,7 @@ gcloud functions deploy $CLOUD_FUNCTION_NAME \
     --set-env-vars TRIGGER_FILE_NAME=$TRIGGER_FILE_NAME \
     --set-env-vars S3_SECRET=$S3_SECRET \
     --set-env-vars LICENSE_SECRET=$LICENSE_SECRET \
-    --trigger-resource=gs://${INPUT_BUCKET} \
+    --trigger-resource=gs://${INPUT_BUCKET_NAME} \
     --trigger-event=google.storage.object.finalize
 
 
