@@ -1,0 +1,8 @@
+{
+    "batch_options": {
+      "task_count": 1000,
+      "parallelism": "30",
+      "max_run_duration": "3600s",
+      "max_retry_count": 2
+    }
+}

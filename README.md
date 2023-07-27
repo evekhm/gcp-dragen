@@ -114,25 +114,79 @@ This command executes following steps:
   
 
 ## Trigger the pipeline
+> Note: You must use specially created and setup `gs://${PROJECT_ID}-input` bucket name for triggering the pipeline.
+
+```shell
+- bucket_name
+  - username
+    - config.json
+    - batch_config.json
+    - references
+    - input1
+      - batch_config.json
+      - config.json
+      - ORA_FILE_1
+      - ORA_FILE_2
+    - input2
+      - ORA_FILE1
+      - ORA_FILE2
+    - input3
+      - batch_config.json
+      - config.json
+      - CRAM_FILE1
+      - CRAM_FILE2
+```
+
+Scenarios:
+1. User wants to re-run all samples located inside `gs://bucket_name/username` directory
+
+In this case `START_PIPELINE` needs to be dropped into the `gs://bucket_name/username`:
+
+* batch_config - `gs://bucket_name/username/batch_config.json` will be used to determine maximum job count and how many jobs to run in parallel
+* input1 - `gs://bucket_name/username/input1/config.json` will be used and ORA_FILE1 and ORA_FILE2 files will be combined in the single Job and fed into the command as listed parameters (`-f -1 ORA_FILE_1, -2 ORA_FILE_2`) 
+* input2 - `gs://bucket_name/username/config.json` will be used (since there is no local config.json)
+* input3 - `gs://bucket_name/username/input3/config.json` config will be used and each CRAM file will be a different Job.
+
+2. User wants to re-run samples inside `gs://bucket_name/username/input1` directory
+
+In this case `START_PIPELINE` needs to be dropped into the `gs://bucket_name/username/input1`:
+
+* batch_config - `gs://bucket_name/username/batch_config.json` will be used, though it will be just single Job for all input1 ORA files
+* config - `gs://bucket_name/username/input1/config.json` will be used for parameters
+
+2. User wants to re-run samples inside `gs://bucket_name/username/input3` directory and has specific batch settings
+
+In this case `START_PIPELINE` needs to be dropped into the `gs://bucket_name/username/input3`:
+
+* batch_config - `gs://bucket_name/username/input3/batch_config.json` will be used
+* config - `gs://bucket_name/username/input3/config.json` will be used for parameters
 
 ### Directly from GCS
-Drop empty file named `START_PIPELINE` (`cloud_function/START_PIPELINE`) inside `gs://${PROJECT_ID}-input/inputs`
+Drop empty file named `START_PIPELINE` (`cloud_function/START_PIPELINE`) inside the required input directory. 
 
 ### From shell
-Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder]` directory:
+Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder_path]` directory:
 ```shell
-./start_pipeline.sh inputs
+./start_pipeline.sh your_folder_path
 ```
+
+> Note: Do not specify bucket name, since it always must be `gs://${PROJECT_ID}-input`
 
 
 ## Configuration
-Sample configuration file is uploaded to the `gs://$PROJECT_ID-input/config.json` folder during the setup step.
-This file can be modified in order to adjust the pipeline execution.
+* Sample run configuration file is uploaded as `gs://$PROJECT_ID-input/config.json`  during the setup step.
+* Batch configuration file describing amount of jobs in parallel and maximum job count for a run is defined in `gs://$PROJECT_ID-input/batch_config.json` file during the setup step.
+These file can be modified in order to adjust the pipeline execution.
 
-If the job is triggered inside a sub-directory, for example: `gs://$PROJECT_ID-input/john/test-run1`
-(by uploading `START_PIPELINE` into the `gs://$PROJECT_ID-input/john/test-run1` directory), then system will first check if there is a local `config.json` file present.
-If not, it will check a parent directory, until it reaches the top `gs://$PROJECT_ID-input`. This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
+ORA files in the same directory - are combined in a single command.
+Each CRAM file - is a separate command. 
 
+Sometimes for ora group files (which belong to the same directory) you want to change `config.json` settings per run. This could be done, by adding local `config.json` file into the same directory along with ora files.
+For example, if ORA files are located in the  `gs://$PROJECT_ID-input/john/test-run1` location, system will first check if there is a local `config.json` file inside `test-run1` and if not, will check the parent directories until it reaches the top input bucket..
+This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
+Notice, that no merging is done.
+
+batch_config.json is a global setting for the run and is expected to be inside the directory in which START_PIPELINE is triggered.  
 ## Troubleshooting
 
 ### Exhausting ssh login profile
@@ -157,3 +211,9 @@ The command above will activate service account and clean up its keys.
 * Sample data downloaded from  [Google Drive DRAGEN_data](https://drive.google.com/corp/drive/folders/1nwewtQCu2KarG-zw_pv4XZhwS8XOc2lo).
 
 * The following [README file](https://docs.google.com/document/d/1Uawxi4UrY_jjsD6Mp-n1o-_gMUB6eSMA5vIWdhVHS3U/edit#heading=h.z1g5ff2ylnea) was used as original input.
+
+## Loading batch Job details
+
+```shell
+gcloud batch jobs describe $JOB_NAME --location us-central1
+```

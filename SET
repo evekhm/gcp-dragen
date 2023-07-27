@@ -4,7 +4,15 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Jarvice
 export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
+
+# 4.0.3
+#export JXE_APP="illumina-dragen_4_0_3n"
+
+# 3.10.4 version of DRAGEN
+#export JXE_APP="illumina-dragen_3_10_4n"
+
 export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:dev"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
 
 # Configuration
 
@@ -40,8 +48,9 @@ export LICENSE_SECRET="license_secret_key"
 export SOURCE_DIR="${DIR}/cloud_function"  # Cloud Function Directory - relative (main.py)
 export SOURCE_ENTRY_POINT='run_job' # Entry point for Cloud Function
 export RUNTIME='python37' # The only properly Supported for Runtime Environment
-export PUBSUB_COMMAND_TOPIC='dragen-trigger'
+export PUBSUB_COMMAND_TOPIC='cloud-function-trigger'
 export CLOUD_FUNCTION_NAME='run_dragen_job'
 export INGRESS_SETTINGS=internal-and-gclb
 
-echo "Using PROJECT_ID=$PROJECT_ID"
+
+echo "Using PROJECT_ID=$PROJECT_ID, INPUT_BUCKET_NAME=$INPUT_BUCKET_NAME, JOB_SERVICE_ACCOUNT=$JOB_SERVICE_ACCOUNT"

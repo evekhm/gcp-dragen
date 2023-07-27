@@ -256,6 +256,7 @@ sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
     ' "${DIR}/cloud_function/config.sample.json" > "${DIR}/cloud_function/config.json"
 
 gsutil cp "${DIR}/cloud_function/config.json" gs://"$INPUT_BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/cloud_function/batch_config.json" gs://"$INPUT_BUCKET_NAME"/ | tee -a "$LOG"
 
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 
