@@ -1,0 +1,39 @@
+{
+    "dragen_options": {
+        "-r": "s3://broad-gp-dragen-demo/References",
+        "--output-directory": "s3://__OUT_BUCKET__/aggregation/<sample-id>/<date>",
+        "--intermediate-results-dir": "/local/scratch",
+        "--output-file-prefix": "<sample-id>",
+        "--vc-sample-name": "<sample-id>",
+        "--enable-map-align": "true",
+        "--enable-map-align-output": "true",
+        "--output-format": "CRAM",
+        "--enable-duplicate-marking": "true",
+        "--enable-variant-caller": "true",
+        "--vc-enable-vcf-output": "true",
+        "--vc-enable-prefilter-output": "true",
+        "--vc-emit-ref-confidence": "GVCF",
+        "--vc-hard-filter": "DRAGENHardQUAL:all:QUAL\\<5.0\\;LowDepth:all:DP\\<=1",
+        "--vc-frd-max-effective-depth": "40",
+        "--vc-enable-joint-detection": "true",
+        "--qc-coverage-region-1": "s3:/broad-gp-dragen-demo/References/wgs_coverage_regions.hg38_minus_N.interval_list.bed",
+        "--qc-coverage-reports-1": "cov_report",
+        "--qc-cross-cont-vcf": "s3://broad-gp-dragen-demo/References/SNP_NCBI_GRCh38.vcf",
+        "--qc-coverage-region-2": "s3://broad-gp-dragen-demo/References/acmg59_allofus_cvl_v1.GRCh38.bed ",
+        "--qc-coverage-reports-2": "cov_report ",
+        "--qc-coverage-region-3": "s3://broad-gp-dragen-demo/References/PGx_singleSite_GRCh38_09nov2020.bed ",
+        "--qc-coverage-reports-3": "cov_report ",
+        "--qc-coverage-ignore-overlaps": "true",
+        "--qc-coverage-count-soft-clipped-bases": "true",
+        "--read-trimmers": "polyg",
+        "--soft-read-trimmers": "none"
+    },
+    "jarvice_options": {
+        "entrypoint": "/bin/bash",
+        "jxe_app": "__JXE_APP__",
+        "image_uri": "__IMAGE__"
+    }
+}
+
+
+

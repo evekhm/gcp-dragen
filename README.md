@@ -2,7 +2,6 @@
 - [Create GCP Environment for DRAGEN](#create-gcp-environment-for-dragen)
   * [Pre-requisites](#pre-requisites)
   * [GCP Infrastructure](#gcp-infrastructure)
-- [Upload Required Input Data](#upload-required-data)
 - [Trigger the pipeline](#trigger-the-pipeline)
   * [Directly from GCS](#directly-from-gcs)
   * [From shell](#from-shell)
@@ -15,11 +14,13 @@
 This is a solution using GCP Cloud Storage -> Pub/Sub -> Cloud Function -> Batch API to trigger execution of the Dragen Software on FPGA dedicated hardware.
 
 It offers a simplified user experience:
-* Easy provisioning of the infrastructure
-* Easy way to trigger pipeline execution, by dropping an empty file called START_PIPELINE into the Cloud Storage bucket with required input data.
-  * The Pipeline execution can be configured by changing config.json file inside the  gs://$PROJECT_ID-input directory
+* Easy provisioning of the infrastructure,
+* Easy way to trigger pipeline execution, by dropping an empty file called START_PIPELINE into the Cloud Storage bucket with required configuration data.
+
 
 ![](docs/ArchitectureOverview.png)
+
+![](docs/Configuration.png)
 ## Create GCP Environment for DRAGEN
 
 
@@ -88,78 +89,20 @@ This command executes following steps:
 * Creates HMAC keys (stores as GCP secrets)
 * Creates Secrets with License keys (stores as GCP secrets)
 * Creates Service Account with required permissions to run the Batch Job
-* Uploads `config.json`  with  Jarvice and Dragen options
+* Uploads sample config files  with batch, Jarvice and Dragen options
 * Deploys Cloud Function - to trigger batch Job on GCS event
 
-
-## Upload Required Data
-
-> Download data using your development machine (Cloud Shell will not have enough capacity). 
-
-* Upload FASTQ ORA data to `gs://${PROJECT_ID}-input/inputs` 
-  * As sample data, you could use `HG002.novaseq.pcr-free.35x.R1.fastq.ora`, `HG002.novaseq.pcr-free.35x.R2.fastq.ora` from [Google Drive DRAGEN_data](https://drive.google.com/corp/drive/folders/16qFUVK-QNGtiNnr4yO-JCZnBNHvrGC11) into `data` directory. Ask [Shyamal Mehtalia](mailto:smehtalia@illumina.com) for access. 
+## Preparations
+* Prepare `batch_config.json` and configuration files for the input (See samples in config )
 
 
-* Upload Reference hg38 data to `gs://${PROJECT_ID}-input/references/`
-  * As sample data, Copy `hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1` (you will need to install [wget](https://www.gnu.org/software/wget/) locally in case it is not installed) into `data` directory:
-    ```shell~~~~
-    cd data
-    wget https://webdata.illumina.com/downloads/software/dragen/hg38%2Balt_masked%2Bcnv%2Bgraph%2Bhla%2Brna-8-r2.0-1.run
-    chmod +x hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1.run
-    ./hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1.run  --target hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1
-    cd ..
-    ```
-* Upload `lenadata` to `gs://${PROJECT_ID}-input/references/`
-  * As sample data, use [lenadata folder](https://drive.google.com/corp/drive/folders/1pOFmVh8YwsH1W9e8En7jxzEYF_0O2rmr). Unzip folder (`unzip lendata-xxxx.zip`) into `data` directory (should end up as `data/lendata/refbin` and `data/lendata/lena_index`)
-  
 
 ## Trigger the pipeline
-> Note: You must use specially created and setup `gs://${PROJECT_ID}-input` bucket name for triggering the pipeline.
 
-```shell
-- bucket_name
-  - username
-    - config.json
-    - batch_config.json
-    - references
-    - input1
-      - batch_config.json
-      - config.json
-      - ORA_FILE_1
-      - ORA_FILE_2
-    - input2
-      - ORA_FILE1
-      - ORA_FILE2
-    - input3
-      - batch_config.json
-      - config.json
-      - CRAM_FILE1
-      - CRAM_FILE2
-```
+Drop empty START_PIPELINE file into the folder inside `gs://${PROJECT_ID}-input` bucket
+That folder must contain `batch_config.json` file
 
-Scenarios:
-1. User wants to re-run all samples located inside `gs://bucket_name/username` directory
 
-In this case `START_PIPELINE` needs to be dropped into the `gs://bucket_name/username`:
-
-* batch_config - `gs://bucket_name/username/batch_config.json` will be used to determine maximum job count and how many jobs to run in parallel
-* input1 - `gs://bucket_name/username/input1/config.json` will be used and ORA_FILE1 and ORA_FILE2 files will be combined in the single Job and fed into the command as listed parameters (`-f -1 ORA_FILE_1, -2 ORA_FILE_2`) 
-* input2 - `gs://bucket_name/username/config.json` will be used (since there is no local config.json)
-* input3 - `gs://bucket_name/username/input3/config.json` config will be used and each CRAM file will be a different Job.
-
-2. User wants to re-run samples inside `gs://bucket_name/username/input1` directory
-
-In this case `START_PIPELINE` needs to be dropped into the `gs://bucket_name/username/input1`:
-
-* batch_config - `gs://bucket_name/username/batch_config.json` will be used, though it will be just single Job for all input1 ORA files
-* config - `gs://bucket_name/username/input1/config.json` will be used for parameters
-
-2. User wants to re-run samples inside `gs://bucket_name/username/input3` directory and has specific batch settings
-
-In this case `START_PIPELINE` needs to be dropped into the `gs://bucket_name/username/input3`:
-
-* batch_config - `gs://bucket_name/username/input3/batch_config.json` will be used
-* config - `gs://bucket_name/username/input3/config.json` will be used for parameters
 
 ### Directly from GCS
 Drop empty file named `START_PIPELINE` (`cloud_function/START_PIPELINE`) inside the required input directory. 

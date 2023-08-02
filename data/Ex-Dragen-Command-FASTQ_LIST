@@ -1,0 +1,29 @@
+dragen -f \
+-r /seq/dragen/references/GRCh38dh/v3.7.8 \
+--fastq-list /seq/dragen/aggregation/1202251828/23-07-13_20-34-14/fastq_list.csv \
+--fastq-list-sample-id <sample-id> \
+--output-directory /seq/dragen/aggregation/<sample-id>/23-07-13_20-34-14 \
+--intermediate-results-dir /local/scratch \
+--output-file-prefix <sample-id> \
+--vc-sample-name <sample-id>\
+--enable-map-align true \
+--enable-map-align-output true \
+--output-format CRAM --enable-duplicate-marking true \
+--enable-variant-caller true \
+--vc-enable-vcf-output true \
+--vc-enable-prefilter-output true \
+--vc-emit-ref-confidence GVCF \
+--vc-hard-filter DRAGENHardQUAL:all:QUAL\<5.0\;LowDepth:all:DP\<=1 \
+--vc-frd-max-effective-depth 40 \
+--vc-enable-joint-detection true \
+--qc-coverage-region-1 /seq/dragen/references/GRCh38dh/v3.7.8/wgs_coverage_regions.hg38_minus_N.interval_list.bed \
+--qc-coverage-reports-1 cov_report \
+--qc-cross-cont-vcf /seq/dragen/references/GRCh38dh/v3.7.8/SNP_NCBI_GRCh38.vcf \
+--qc-coverage-region-2 /seq/dragen/references/GRCh38dh/v3.7.8/acmg59_allofus_cvl_v1.GRCh38.bed \
+--qc-coverage-reports-2 cov_report \
+--qc-coverage-region-3 /seq/dragen/references/GRCh38dh/v3.7.8/PGx_singleSite_GRCh38_09nov2020.bed \
+--qc-coverage-reports-3 cov_report \
+--qc-coverage-ignore-overlaps true \
+--qc-coverage-count-soft-clipped-bases true \
+--read-trimmers polyg \
+--soft-read-trimmers none

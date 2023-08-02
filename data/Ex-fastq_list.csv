@@ -1,0 +1,25 @@
+RGID,RGSM,RGPU,RGPL,RGLB,RGCN,RGPM,Lane,Read1File,Read2File
+2253H2LT3.8,,2253H2LT3.8.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,8,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_8_<sample-id>_S175_L008_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_8_<sample-id>
+_S175_L008_R2_001.fastq.gz
+2253H2LT3.5,<sample-id>,2253H2LT3.5.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,5,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_5_<sample-id>_S103_L005_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_5_<sample-id>
+_S103_L005_R2_001.fastq.gz
+2253H2LT3.6,<sample-id>,2253H2LT3.6.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,6,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_6_<sample-id>_S127_L006_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_6_<sample-id>
+_S127_L006_R2_001.fastq.gz
+2253H2LT3.2,<sample-id>,2253H2LT3.2.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,2,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_2_<sample-id>_S31_L002_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_2_<sample-id>_
+S31_L002_R2_001.fastq.gz
+2253H2LT3.4,<sample-id>,2253H2LT3.4.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,4,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_4_<sample-id>_S79_L004_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_4_<sample-id>_
+S79_L004_R2_001.fastq.gz
+2253H2LT3.3,<sample-id>,2253H2LT3.3.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,3,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_3_<sample-id>_S55_L003_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_3_<sample-id>_
+S55_L003_R2_001.fastq.gz
+2253H2LT3.1,<sample-id>,2253H2LT3.1.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,1,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_1_<sample-id>_S7_L001_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_1_<sample-id>_S
+7_L001_R2_001.fastq.gz
+2253H2LT3.7,<sample-id>,2253H2LT3.7.ACAGTTGA_GCTCCGAT,ILLUMINA,0427948007_Illumina_P5-Pojif_P7-Caton,BI,NovaSeq X,7,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-
+07-13--14-00-37/fastq/2253H2LT3_7_<sample-id>_S151_L007_R1_001.fastq.gz,/seq/dragen/fastqs/prod/SL-EXB/230713_SL-EXB_0042_B2253H2LT3/dragen/2023-07-13--14-00-37/fastq/2253H2LT3_7_<sample-id>
+_S151_L007_R2_001.fastq.gz

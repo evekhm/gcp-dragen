@@ -247,16 +247,42 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
          --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/storage.admin"
 
-$printf "Preparing config.json file" | tee -a "$LOG"
-sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
-    s|__JXE_APP__|'"$JXE_APP"'|g;
-    s|__JXE_APP__|'"$JXE_APP"'|g;
-    s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
-    s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
-    ' "${DIR}/cloud_function/config.sample.json" > "${DIR}/cloud_function/config.json"
+# Creating bucket for config with versioning
+create_bucket "${CONFIG_BUCKET_NAME}"
+gsutil versioning set on "gs://${CONFIG_BUCKET_NAME}"
 
-gsutil cp "${DIR}/cloud_function/config.json" gs://"$INPUT_BUCKET_NAME"/ | tee -a "$LOG"
-gsutil cp "${DIR}/cloud_function/batch_config.json" gs://"$INPUT_BUCKET_NAME"/ | tee -a "$LOG"
+function substitute(){
+  INPUT_FILE=$1
+  OUTPUT_FILE=$2
+  sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
+      s|__JXE_APP__|'"$JXE_APP"'|g;
+      s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
+      s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
+      s|__CONFIG_BUCKET__|'"$CONFIG_BUCKET_NAME"'|g;
+      s|__DATA_BUCKET__|'"$DATA_BUCKET_NAME"'|g;
+      ' "${INPUT_FILE}" > "${OUTPUT_FILE}"
+}
+
+$printf "Preparing config files" | tee -a "$LOG"
+
+substitute "${DIR}/config/cram/cram_config.sample.json" "${DIR}/config/cram/cram_config.json"
+substitute "${DIR}/config/cram/batch_config.sample.json" "${DIR}/config/cram/batch_config.json"
+substitute "${DIR}/config/fastq/fastq_config.sample.json" "${DIR}/config/fastq/fastq_config.json"
+substitute "${DIR}/config/fastq/batch_config.sample.json" "${DIR}/config/fastq/batch_config.json"
+substitute "${DIR}/config/fastq_list/fastq_list_config.sample.json" "${DIR}/config/fastq_list/fastq_list_config.json"
+substitute "${DIR}/config/fastq_list/batch_config.sample.json" "${DIR}/config/fastq_list/batch_config.json"
+
+
+gsutil cp "${DIR}/config/fastq/fastq_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/fastq/fastq_list_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/cram_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
+
+
+gsutil cp "${DIR}/config/fastq_list/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/fastq_list/fastq_list.csv" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/batch_config.json" gs://"$INPUT_BUCKET_NAME"/cram_test/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/fastq/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_test/ | tee -a "$LOG"
 
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 

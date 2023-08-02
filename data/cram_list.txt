@@ -1,0 +1,3 @@
+collaborator_sample_id	cram_file_ref
+NA1	gs://dragen-ek-3-input/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora
+NA2	gs://dragen-ek-3-input/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora

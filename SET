@@ -29,8 +29,12 @@ export GCLOUD_IMAGE_PROJECT=atos-illumina-public
 export GCLOUD_BATCH_IMAGE_PROJECT=batch-custom-image
 export GCLOUD_MACHINE=n1-standard-2
 export GCLOUD_INSTANCE=dragen
-export INPUT_BUCKET_NAME=${PROJECT_ID}-input
-export OUTPUT_BUCKET_NAME=${PROJECT_ID}-output #
+
+export DATA_BUCKET_NAME=${DATA_BUCKET_NAME:-${PROJECT_ID}-data}
+export INPUT_BUCKET_NAME=${INPUT_BUCKET_NAME:-${PROJECT_ID}-input}
+export OUTPUT_BUCKET_NAME=${OUTPUT_BUCKET_NAME:-${PROJECT_ID}-output}
+export CONFIG_BUCKET_NAME=${PROJECT_ID}-config
+
 export GCLOUD_NETWORK=default
 export GCLOUD_SUBNET=default
 export JOB_NAME_SHORT="job-dragen"
