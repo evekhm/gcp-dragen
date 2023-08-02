@@ -7,7 +7,8 @@ dragen -f \
 --vc-sample-name <sample-id>\
 --enable-map-align true \
 --enable-map-align-output true \
---output-format CRAM --enable-duplicate-marking true \
+--output-format CRAM
+--enable-duplicate-marking true \
 --enable-variant-caller true \
 --vc-enable-vcf-output true \
 --vc-enable-prefilter-output true \

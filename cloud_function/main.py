@@ -316,7 +316,7 @@ def get_task_command(dragen_options, jarvice_options, inputs, sample_id=""):
               f"--s3-access-key {access_key} " \
               f"--s3-secret-key {access_secret} " \
               f"-- " \
-              f"-f {inputs}" \
+              f" {inputs}" \
               f" {dragen_command} " \
               f"--lic-server https://{illumina_license}@license.edicogenome.com"
     Logger.info(f"======== {command}")

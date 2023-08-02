@@ -1,5 +1,6 @@
 {
     "dragen_options": {
+        "--force": " ",
         "-r": "s3://broad-gp-dragen-demo/References",
         "--output-directory": "s3://__OUT_BUCKET__/aggregation/<sample-id>/<date>",
         "--intermediate-results-dir": "/local/scratch",

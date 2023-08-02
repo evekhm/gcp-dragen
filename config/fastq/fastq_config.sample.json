@@ -1,5 +1,6 @@
 {
   "dragen_options": {
+      "--force": "",
       "--RGID": "HG002",
       "--RGSM": "HG002",
       "--ora-reference": "s3://__DATA_BUCKET__/fastq/references/lenadata",
