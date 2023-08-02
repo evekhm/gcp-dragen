@@ -274,7 +274,7 @@ substitute "${DIR}/config/fastq_list/batch_config.sample.json" "${DIR}/config/fa
 
 
 gsutil cp "${DIR}/config/fastq/fastq_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/fastq/fastq_list_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/fastq_list/fastq_list_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
 gsutil cp "${DIR}/config/cram/cram_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
 
 
