@@ -1,8 +1,8 @@
 {
     "dragen_options": {
-        "--force": " ",
-        "-r": "s3://broad-gp-dragen-demo/References/hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1",
-        "--output-directory": "s3://__OUT_BUCKET__/aggregation/<sample-id>/<date>",
+        "--force": "",
+        "-r": "s3://broad-gp-dragen-demo/References/hg38_alt_masked_graph_v2+cnv+graph+rna-8-1644018559",
+        "--output-directory": "s3://__OUT_BUCKET__/3_10/aggregation/<sample-id>/<date>",
         "--intermediate-results-dir": "/local/scratch",
         "--output-file-prefix": "<sample-id>",
         "--vc-sample-name": "<sample-id>",
@@ -30,8 +30,8 @@
     },
     "jarvice_options": {
         "entrypoint": "/bin/bash",
-        "jxe_app": "__JXE_APP__",
-        "image_uri": "__IMAGE__"
+        "jxe_app": "illumina-dragen_3_10_4n",
+        "image_uri": "us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
     }
 }
 

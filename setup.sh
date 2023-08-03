@@ -265,8 +265,15 @@ function substitute(){
 
 $printf "Preparing config files" | tee -a "$LOG"
 
+substitute "${DIR}/config/cram/cram_config_310.sample.json" "${DIR}/config/cram/cram_config_310.json"
+substitute "${DIR}/config/cram/cram_config_310.sample.json" "${DIR}/config/cram/cram_config_310.json"
 substitute "${DIR}/config/cram/cram_config.sample.json" "${DIR}/config/cram/cram_config.json"
-substitute "${DIR}/config/cram/batch_config.sample.json" "${DIR}/config/cram/batch_config.json"
+
+
+substitute "${DIR}/config/cram/batch_config_403.sample.json" "${DIR}/config/cram/batch_config_403.json"
+substitute "${DIR}/config/cram/batch_config_310.sample.json" "${DIR}/config/cram/batch_config_310.json"
+
+
 substitute "${DIR}/config/fastq/fastq_config.sample.json" "${DIR}/config/fastq/fastq_config.json"
 substitute "${DIR}/config/fastq/batch_config.sample.json" "${DIR}/config/fastq/batch_config.json"
 substitute "${DIR}/config/fastq_list/fastq_list_config.sample.json" "${DIR}/config/fastq_list/fastq_list_config.json"
@@ -276,12 +283,18 @@ substitute "${DIR}/config/fastq_list/batch_config.sample.json" "${DIR}/config/fa
 gsutil cp "${DIR}/config/fastq/fastq_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
 gsutil cp "${DIR}/config/fastq_list/fastq_list_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
 gsutil cp "${DIR}/config/cram/cram_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/cram_config_310.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/cram_config_403.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
 
 
 gsutil cp "${DIR}/config/fastq_list/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/ | tee -a "$LOG"
 gsutil cp "${DIR}/config/fastq_list/fastq_list.csv" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/batch_config.json" gs://"$INPUT_BUCKET_NAME"/cram_test/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/ | tee -a "$LOG"
+
+gsutil cp "${DIR}/config/cram/batch_config_403.json" gs://"$INPUT_BUCKET_NAME"/cram_test/403/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/batch_config_310.json" gs://"$INPUT_BUCKET_NAME"/cram_test/310/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/310/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/403/ | tee -a "$LOG"
+
 gsutil cp "${DIR}/config/fastq/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_test/ | tee -a "$LOG"
 
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"

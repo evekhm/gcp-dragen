@@ -1,2 +1,2 @@
 collaborator_sample_id	cram_file_ref
-NA12878	s3://broad-gp-dragen-demo/NA12878/NA12878.cram
+NA12878	s3://dragen-ek-3-data/broad-gp-dragen-demo/NA12878/NA12878.cram

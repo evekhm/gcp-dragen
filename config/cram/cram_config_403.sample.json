@@ -1,8 +1,8 @@
 {
     "dragen_options": {
-        "--force": " ",
+        "--force": "",
         "-r": "s3://broad-gp-dragen-demo/References/hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1",
-        "--output-directory": "s3://__OUT_BUCKET__/aggregation/<sample-id>/<date>",
+        "--output-directory": "s3://__OUT_BUCKET__/4_03/aggregation/<sample-id>/<date>",
         "--intermediate-results-dir": "/local/scratch",
         "--output-file-prefix": "<sample-id>",
         "--vc-sample-name": "<sample-id>",
@@ -30,8 +30,8 @@
     },
     "jarvice_options": {
         "entrypoint": "/bin/bash",
-        "jxe_app": "__JXE_APP__",
-        "image_uri": "__IMAGE__"
+        "jxe_app": "illumina-dragen_4_0_3n",
+        "image_uri": "us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
     }
 }
 

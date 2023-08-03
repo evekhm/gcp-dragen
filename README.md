@@ -158,5 +158,5 @@ The command above will activate service account and clean up its keys.
 ## Loading batch Job details
 
 ```shell
-gcloud batch jobs describe $JOB_NAME --location us-central1
+gcloud batch jobs describe --location us-central1 $JOB_NAME 
 ```

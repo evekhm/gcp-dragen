@@ -3,16 +3,14 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Jarvice
-export JXE_APP="illumina-dragen_4_0_3_13_g52a8599a"
-
 # 4.0.3
-#export JXE_APP="illumina-dragen_4_0_3n"
+export JXE_APP="illumina-dragen_4_0_3n"
 
 # 3.10.4 version of DRAGEN
 #export JXE_APP="illumina-dragen_3_10_4n"
 
-export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:dev"
-#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:dev"
+export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
 
 # Configuration
 
