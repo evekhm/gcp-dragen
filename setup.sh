@@ -266,13 +266,11 @@ function substitute(){
 $printf "Preparing config files" | tee -a "$LOG"
 
 substitute "${DIR}/config/cram/cram_config_310.sample.json" "${DIR}/config/cram/cram_config_310.json"
-substitute "${DIR}/config/cram/cram_config_310.sample.json" "${DIR}/config/cram/cram_config_310.json"
+substitute "${DIR}/config/cram/cram_config_403.sample.json" "${DIR}/config/cram/cram_config_403.json"
 substitute "${DIR}/config/cram/cram_config.sample.json" "${DIR}/config/cram/cram_config.json"
-
 
 substitute "${DIR}/config/cram/batch_config_403.sample.json" "${DIR}/config/cram/batch_config_403.json"
 substitute "${DIR}/config/cram/batch_config_310.sample.json" "${DIR}/config/cram/batch_config_310.json"
-
 
 substitute "${DIR}/config/fastq/fastq_config.sample.json" "${DIR}/config/fastq/fastq_config.json"
 substitute "${DIR}/config/fastq/batch_config.sample.json" "${DIR}/config/fastq/batch_config.json"
