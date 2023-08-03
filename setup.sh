@@ -290,8 +290,7 @@ gsutil cp "${DIR}/config/fastq_list/fastq_list.csv" gs://"$INPUT_BUCKET_NAME"/fa
 
 gsutil cp "${DIR}/config/cram/batch_config_403.json" gs://"$INPUT_BUCKET_NAME"/cram_test/403/ | tee -a "$LOG"
 gsutil cp "${DIR}/config/cram/batch_config_310.json" gs://"$INPUT_BUCKET_NAME"/cram_test/310/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/310/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/403/ | tee -a "$LOG"
+gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/ | tee -a "$LOG"
 
 gsutil cp "${DIR}/config/fastq/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_test/ | tee -a "$LOG"
 
