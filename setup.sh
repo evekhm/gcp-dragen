@@ -297,14 +297,10 @@ gsutil cp "${DIR}/config/fastq/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fast
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 
 $printf "Success! Infrastructure deployed and ready!"  | tee -a "$LOG"
-echo "Next steps:"  | tee -a "$LOG"
-echo " > Upload Required ORA files into gs://$INPUT_BUCKET_NAME/<your_folder>:"  | tee -a "$LOG"
-echo " > Set reference data via gs://$INPUT_BUCKET_NAME/config.json"  | tee -a "$LOG"
 
 echo " > Start the pipeline: "  | tee -a "$LOG"
-echo "Drop empty file named START_PIPELINE inside gs://${INPUT_BUCKET_NAME}/<your_folder>"  | tee -a "$LOG"
-echo "Or run following command:"  | tee -a "$LOG"
-echo "./start_pipeline.sh <your_folder>"  | tee -a "$LOG"
+echo "Drop empty file named START_PIPELINE inside gs://${INPUT_BUCKET_NAME}/<folder_with_batch_config> "  | tee -a "$LOG"
+
 
 timestamp=$(date +"%m-%d-%Y_%H:%M:%S")
 echo "$timestamp Finished. Saved Log into $LOG"  | tee -a "$LOG"
