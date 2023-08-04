@@ -67,6 +67,7 @@ Following licenses and keys are required to operate this solution:
 * Open Cloud Shell and set env variable accordingly:
   ```shell
   export PROJECT_ID=
+  export DATA_BUCKET_NAME=broad-gp-dragen-demo
   ```
 
 * Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`)to set env variables (to be used during the deployment)

@@ -175,18 +175,7 @@ if [ -z "$LICENSE_SECRET_KEY" ] ; then
 else
   $printf "Successfully created $LICENSE_SECRET secret." | tee -a "$LOG"
 fi
-# terraform
-#```shell
-## Create a new service account
-#resource "google_service_account" "service_account" {
-#  account_id = "my-svc-acc"
-#}
-#
-## Create the HMAC key for the associated service account
-#resource "google_storage_hmac_key" "key" {
-#  service_account_email = google_service_account.service_account.email
-#}
-#```
+
 
 SA_EXISTS=$(gcloud iam service-accounts list --filter="${SA_JOB_NAME}" | wc -l)
 if [ $SA_EXISTS = "0" ]; then
@@ -251,48 +240,9 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
 create_bucket "${CONFIG_BUCKET_NAME}"
 gsutil versioning set on "gs://${CONFIG_BUCKET_NAME}"
 
-function substitute(){
-  INPUT_FILE=$1
-  OUTPUT_FILE=$2
-  sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
-      s|__JXE_APP__|'"$JXE_APP"'|g;
-      s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
-      s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
-      s|__CONFIG_BUCKET__|'"$CONFIG_BUCKET_NAME"'|g;
-      s|__DATA_BUCKET__|'"$DATA_BUCKET_NAME"'|g;
-      ' "${INPUT_FILE}" > "${OUTPUT_FILE}"
-}
 
-$printf "Preparing config files" | tee -a "$LOG"
+bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
 
-substitute "${DIR}/config/cram/cram_config_310.sample.json" "${DIR}/config/cram/cram_config_310.json"
-substitute "${DIR}/config/cram/cram_config_403.sample.json" "${DIR}/config/cram/cram_config_403.json"
-substitute "${DIR}/config/cram/cram_config.sample.json" "${DIR}/config/cram/cram_config.json"
-
-substitute "${DIR}/config/cram/batch_config_403.sample.json" "${DIR}/config/cram/batch_config_403.json"
-substitute "${DIR}/config/cram/batch_config_310.sample.json" "${DIR}/config/cram/batch_config_310.json"
-
-substitute "${DIR}/config/fastq/fastq_config.sample.json" "${DIR}/config/fastq/fastq_config.json"
-substitute "${DIR}/config/fastq/batch_config.sample.json" "${DIR}/config/fastq/batch_config.json"
-substitute "${DIR}/config/fastq_list/fastq_list_config.sample.json" "${DIR}/config/fastq_list/fastq_list_config.json"
-substitute "${DIR}/config/fastq_list/batch_config.sample.json" "${DIR}/config/fastq_list/batch_config.json"
-
-
-gsutil cp "${DIR}/config/fastq/fastq_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/fastq_list/fastq_list_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/cram_config.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/cram_config_310.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/cram_config_403.json" gs://"$CONFIG_BUCKET_NAME"/ | tee -a "$LOG"
-
-
-gsutil cp "${DIR}/config/fastq_list/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/fastq_list/fastq_list.csv" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/ | tee -a "$LOG"
-
-gsutil cp "${DIR}/config/cram/batch_config_403.json" gs://"$INPUT_BUCKET_NAME"/cram_test/403/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/batch_config_310.json" gs://"$INPUT_BUCKET_NAME"/cram_test/310/ | tee -a "$LOG"
-gsutil cp "${DIR}/config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/ | tee -a "$LOG"
-
-gsutil cp "${DIR}/config/fastq/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_test/ | tee -a "$LOG"
 
 bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
 

@@ -3,8 +3,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$DIR/utils/print"
 gcloud config set project $PROJECT_ID
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-  source "${DIR}"/SET
+source "${DIR}"/SET
 
 $printf "Deploying Cloud Function=[$SOURCE_ENTRY_POINT]..."
 gcloud functions deploy $CLOUD_FUNCTION_NAME \
