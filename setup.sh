@@ -1,4 +1,18 @@
 #!/bin/bash
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$DIR/utils/print"
 LOG="$DIR/setup.log"
@@ -80,7 +94,7 @@ gcloud org-policies reset constraints/compute.vmExternalIpAccess --project=$PROJ
 gcloud org-policies reset constraints/compute.requireShieldedVm --project=$PROJECT_ID
 gcloud org-policies reset constraints/storage.restrictAuthTypes --project=$PROJECT_ID
 
-echo "Allow upto 30 seconds to Propagate the policy changes"
+echo "Allow up to 30 seconds to propagate the policy changes..."
 sleep 30
 echo "Policy Changes done"
 # Otherwise fails on PreconditionException: 412 Request violates constraint 'constraints/iam.disableServiceAccountKeyCreation'
@@ -132,30 +146,36 @@ fi
 
 [ ! -d "$DIR/tmp" ] && mkdir "$DIR/tmp"
 
-$printf "Creating HMAC keys..."  | tee -a "$LOG"
-gsutil hmac create "$SA_EMAIL_STORAGE" > tmp/hmackey.txt
-access_key=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $1}'`
-access_secret=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $2}'`
-echo "{\"access_key\": \"${access_key}\",  \"access_secret\": \"${access_secret}\" , \"endpoint\" : \"https://storage.googleapis.com\" }" > tmp/hmacsecret.json
-
+##### HMAC Secret cannot be retrieved once created
+#### Check if secret already exists => Skip Creation of HMAC key
+$printf "Verifying Secrets and HMAC keys..."  | tee -a "$LOG"
 exists=$(gcloud secrets describe ${S3_SECRET} 2> /dev/null)
 if [ -z "$exists" ]; then
+  $printf "Creating HMAC keys..."  | tee -a "$LOG"
+  gsutil hmac create "$SA_EMAIL_STORAGE" > tmp/hmackey.txt
+  access_key=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $1}'`
+  access_secret=`cat  tmp/hmackey.txt  | awk  -F: '{print $2}' | xargs | awk '{print $2}'`
+  echo "{\"access_key\": \"${access_key}\",  \"access_secret\": \"${access_secret}\" , \"endpoint\" : \"https://storage.googleapis.com\" }" > tmp/hmacsecret.json
+
   $printf "Creating ${S3_SECRET} secret..."  | tee -a "$LOG"
   gcloud secrets create $S3_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
-fi
-gcloud secrets versions add $S3_SECRET --data-file="tmp/hmacsecret.json" | tee -a "$LOG"
-rm -rf tmp/hmacsecret.json tmp/hmackey.txt # delete temp file
 
+  gcloud secrets versions add $S3_SECRET --data-file="tmp/hmacsecret.json" | tee -a "$LOG"
+  rm -rf tmp/hmacsecret.json tmp/hmackey.txt # delete temp file
+fi
 S3_ACCESS_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_key" | tr -d '"')
 S3_SECRET_KEY=$(gcloud secrets versions access latest --secret="$S3_SECRET" --project=$PROJECT_ID | jq ".access_secret" | tr -d '"')
 if [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_SECRET_KEY" ] ; then
-  echo "$S3_SECRET was not created properly"
+  echo "$S3_SECRET was not created properly (HMAC key count limit reached?)"
   echo "Try running following command to debug:"
   echo "  gcloud secrets versions access latest --secret=$S3_SECRET --project=$PROJECT_ID "
+  echo " When HMAC Key Limit is reached, old HMAC Key needs to be de-activated and deleted, before new one can be re-created"
+  echo "  gsutil hmac list -u $SA_EMAIL_STORAGE"
   exit
 else
-  echo "Successfully created $S3_SECRET secret."
+  echo "Verified $S3_SECRET for HMAC keys - Success!"
 fi
+
 
 echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
 exists=$(gcloud secrets describe ${LICENSE_SECRET} 2> /dev/null)
@@ -173,7 +193,7 @@ if [ -z "$LICENSE_SECRET_KEY" ] ; then
   echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
   exit
 else
-  $printf "Successfully created $LICENSE_SECRET secret." | tee -a "$LOG"
+  $printf "Verified $LICENSE_SECRET secret - Success!" | tee -a "$LOG"
 fi
 
 
@@ -254,7 +274,3 @@ echo "Drop empty file named START_PIPELINE inside gs://${INPUT_BUCKET_NAME}/<fol
 
 timestamp=$(date +"%m-%d-%Y_%H:%M:%S")
 echo "$timestamp Finished. Saved Log into $LOG"  | tee -a "$LOG"
-
-
-
-

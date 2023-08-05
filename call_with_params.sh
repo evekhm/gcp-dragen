@@ -1,4 +1,19 @@
 #!/bin/bash
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 set -e # Exit if error is detected during pipeline execution => terraform failing
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${DIR}"/SET
@@ -81,33 +96,3 @@ date_str=$(date +%s )
   --logging-to-output-dir true \
   --syslogging-to-output-dir true \
   --lic-server https://"$ILLUMINA_LICENSE"@license.edicogenome.com
-
-
-  dragen -f \
-  -r /seq/dragen/references/GRCh38dh/v3.7.8 \
-  --cram-input /path/to/input/<sample-id.cram>
-  --output-directory /seq/dragen/aggregation/<sample-id>/23-07-13_20-34-14 \
-  --intermediate-results-dir /local/scratch \
-  --output-file-prefix <sample-id> \
-  --vc-sample-name <sample-id>\
-  --enable-map-align true \
-  --enable-map-align-output true \
-  --output-format CRAM --enable-duplicate-marking true \
-  --enable-variant-caller true \
-  --vc-enable-vcf-output true \
-  --vc-enable-prefilter-output true \
-  --vc-emit-ref-confidence GVCF \
-  --vc-hard-filter DRAGENHardQUAL:all:QUAL\<5.0\;LowDepth:all:DP\<=1 \
-  --vc-frd-max-effective-depth 40 \
-  --vc-enable-joint-detection true \
-  --qc-coverage-region-1 /seq/dragen/references/GRCh38dh/v3.7.8/wgs_coverage_regions.hg38_minus_N.interval_list.bed \
-  --qc-coverage-reports-1 cov_report \
-  --qc-cross-cont-vcf /seq/dragen/references/GRCh38dh/v3.7.8/SNP_NCBI_GRCh38.vcf \
-  --qc-coverage-region-2 /seq/dragen/references/GRCh38dh/v3.7.8/acmg59_allofus_cvl_v1.GRCh38.bed \
-  --qc-coverage-reports-2 cov_report \
-  --qc-coverage-region-3 /seq/dragen/references/GRCh38dh/v3.7.8/PGx_singleSite_GRCh38_09nov2020.bed \
-  --qc-coverage-reports-3 cov_report \
-  --qc-coverage-ignore-overlaps true \
-  --qc-coverage-count-soft-clipped-bases true \
-  --read-trimmers polyg \
-  --soft-read-trimmers none

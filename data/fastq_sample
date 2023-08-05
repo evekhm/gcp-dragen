@@ -1,0 +1,39 @@
+jarvice-dragen-stub.sh \
+--project illumina-dragen  \
+--network default    \
+--subnet default \
+--username USERNAME  \
+--apikey API_KEY \
+--dragen-app illumina-dragen_4_0_3_13_g52a8599a   \
+--s3-access-key ACCESS-KEY  \
+--s3-secret-key SECRET-KEY \
+--\
+-f -1 s3://illumina-dragen-sample-data/inputs/HG002.novaseq.pcr-free.35x.R1.fastq.ora \
+-2 s3://illumina-dragen-sample-data/inputs/HG002.novaseq.pcr-free.35x.R2.fastq.ora \
+--RGID HG002 \
+--RGSM HG002 \
+--ora-reference s3://illumina-dragen-sample-data/references/lenadata \
+-r s3://illumina-dragen-sample-data/references/hg38_alt_masked_cnv_graph_hla_rna-8-r2.0-1 \
+--enable-map-align true \
+--enable-map-align-output true \
+--enable-duplicate-marking true \
+--output-format CRAM \
+--enable-variant-caller true \
+--enable-vcf-compression true \
+--vc-emit-ref-confidence GVCF \
+--vc-enable-vcf-output true \
+--enable-cnv true \
+--cnv-enable-self-normalization true \
+--cnv-segmentation-mode slm \
+--enable-cyp2d6 true \
+--enable-cyp2b6 true \
+--enable-gba true \
+--enable-smn true \
+--enable-star-allele true \
+--enable-sv true \
+--repeat-genotype-enable true \
+--repeat-genotype-use-catalog expanded \
+--output-file-prefix HG002_pure \
+--output-directory s3://illumina-dragen-sample-data/output/1684194227 \
+--intermediate-results-dir /tmp/whole_genome/temp \
+--logging-to-output-dir true --syslogging-to-output-dir true
