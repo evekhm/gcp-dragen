@@ -21,12 +21,12 @@ It offers a simplified user experience:
 ![](docs/ArchitectureOverview.png)
 
 ![](docs/Configuration.png)
-## Create GCP Environment for DRAGEN
 
 
 
-### Pre-requisites
+## Pre-requisites
 
+### License Information
 Following licenses and keys are required to operate this solution:
 * Illumina
 > Obtain a DRAGEN license key from Illumina.
@@ -35,18 +35,27 @@ Following licenses and keys are required to operate this solution:
 > If you do not have a JARVICE username and API key for the Atos FPGA Acceleration for Illumina DRAGEN Bio-IT Platform solution, please contact support@nimbix.net.
 
 
-- The following list of **Organizational Policy Constraints** will be enabled on the Google Cloud Organization your GCP Project is in:
+### Infrastructure Preparation
+
+In case you do not have org level admin access to modify Policy Constraints, make sure the following policies are disabled for your GCP project or request your admin to do so.
+If you have Org Level admin access, this could be done programmatically when setting up the system:
 
 | Policy Name                          |  Constraint Name     |  Effective Polciy   |
 |--------------------------------------|-----|-----|
 | Disable service account creation     |  constraints/iam.disableServiceAccountCreation   |  Not Enforced    |
 | Disable service account key creation |   constraints/iam.disableServiceAccountKeyCreation  |  Not Enforced    |
 | Allow list for External IP address   |    constraints/compute.vmExternalIpAccess  |  Not Enforced    |
-|  Require ShieldedVm                                      |   constraints/compute.requireShieldedVm   | Not Enforced     |
-|  Restrict authentication types                                    |  constraints/storage.restrictAuthTypes   |  Not Enforced    |
+| Require ShieldedVm                                      |   constraints/compute.requireShieldedVm   | Not Enforced     |
+| Restrict authentication types                                    |  constraints/storage.restrictAuthTypes   |  Not Enforced    |
+
+For `Restrict authentication types` - either should AllowAll or following projects need to be added:
+
+- `projects/illumina-dragen`
+- `projects/atos-illumina-public`
+- `projects/batch-custom-image`
 
 
-<br>
+Following Google APIs need to be enabled (in case you do not have admin level access and this need to be requested separately. Otherwise, step could be skipped):
 
 - The follow APIs will be used:
   * orgpolicy.googleapis.com
@@ -61,21 +70,31 @@ Following licenses and keys are required to operate this solution:
   * cloudbuild.googleapis.com
   * cloudresourcemanager.googleapis.com
 
-### GCP Infrastructure
+## GCP Setup
 
-* Create GCP Project
+* Create GCP Project with assigned project account
 * Open Cloud Shell and set env variable accordingly:
   ```shell
   export PROJECT_ID=
-  export DATA_BUCKET_NAME=broad-gp-dragen-demo
   ```
 
+* Point to the Cloud Storage Bucket containing Samples Data:
+  ```shell
+  export DATA_BUCKET_NAME=broad-gp-dragen-demo
+  ```
 * Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`)to set env variables (to be used during the deployment)
   ```shell
   export ILLUMINA_LICENSE=
   export JXE_APIKEY=
   export JXE_USERNAME=
   ```
+  
+* At this point you either have manually followed the pre-requisites to disable policy constraints, or you have org level admin rights  and this could be done for you, when following variable is set: 
+
+```shell
+export DISABLE_POLICY=true
+```
+
 * Run following command to provision required infrastructure (Org policies, VPC, GCP Buckets, HMAC keys):
   ```shell
   ./setup.sh
@@ -160,4 +179,30 @@ The command above will activate service account and clean up its keys.
 
 ```shell
 gcloud batch jobs describe --location us-central1 $JOB_NAME 
+```
+
+## Sharing Code with the Customer
+
+Configure the repo access control so customer can view or download it:
+* Go to [cloud-ce-shared-csr project](https://source.cloud.google.com/cloud-ce-shared-csr?project=cloud-ce-shared-cs) in Cloud Source Repos
+* Select [this repository](https://source.cloud.google.com/cloud-ce-shared-csr/evekhm-broad-dragen)
+* Select the settings icon  (top right)
+* Select Permissions
+* In the Members box, add one or more customer's email address (They need to have a google account)
+* Set Role to: Source repository-->Source Repository Reader
+* Click Add
+
+Your Customer can now clone the repository in their own environment. Provide the following instructions to the customer:
+* Install the [Google Cloud SDK](https://cloud.google.com/sdk)
+* Authenticate the SDK with their Google credentials
+
+```shell
+gcloud init
+```
+
+* Clone the repository (replace USERNAME-project-name with your repo name)
+```shell
+gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr
+cd evekhm-broad-dragen
+git checkout main
 ```
