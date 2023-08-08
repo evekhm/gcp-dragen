@@ -112,20 +112,32 @@ This command executes following steps:
 * Uploads sample config files  with batch, Jarvice and Dragen options
 * Deploys Cloud Function - to trigger batch Job on GCS event
 
-## Preparations
-* Prepare `batch_config.json` and configuration files for the input (See samples in config )
+## Configuration
+There are sample configuration files generated to inspect:
 
+* $PROJECT_ID-input/cram_test/403/batch_config.json  - to Run cram jobs using 4.03 version
+  * References `gs://$PROJECT_ID-config/cram_config_403.json` config
+* $PROJECT_ID-input/cram_test/310/batch_config.json  - to Run cram jobs using 3.10 version
+  * References `gs://$PROJECT_ID-config/cram_config_310.json` config
+* $PROJECT_ID-input/fastq_test/batch_config.json     - to Run fastq job using 4.03 version
+  * References `gs://$PROJECT_ID-config/fastq_config.json` config
 
+Batch configuration file describing amount of jobs in parallel and maximum job count for a run is must be named `batch_config.json`.
+ 
+Inspect/modify/create new  `batch_config.json` and configuration files for the input (See samples in config )
+
+Note (based on the suer requirements):
+* ORA files in the same directory - are combined in a single command.
+* Each CRAM file - is a separate command.
 
 ## Trigger the pipeline
 
-Drop empty START_PIPELINE file into the folder inside `gs://${PROJECT_ID}-input` bucket
-That folder must contain `batch_config.json` file
+Drop empty file named  `START_PIPELINE` (see  `cloud_function/START_PIPELINE`)  into the folder containing `batch_config.json` file (Must be inside `gs://${PROJECT_ID}-input` bucket, since it is configured to listen to the Pub/Sub Cloud Storage event )
 
+Sample scripts to trigger for execution (to be run from the Cloud Shell):
 
-
-### Directly from GCS
-Drop empty file named `START_PIPELINE` (`cloud_function/START_PIPELINE`) inside the required input directory. 
+* ./run_cram_403.sh - to trigger 4.03 execution of cram jobs (using `$PROJECT_ID-input/cram_test/403/batch_config.json`)
+* ./run_fastq_403.sh - to trigger fastq 4.03 execution (using `$PROJECT_ID-input/fastq_test/batch_config.json`)
 
 ### From shell
 Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder_path]` directory:
@@ -135,21 +147,6 @@ Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-inp
 
 > Note: Do not specify bucket name, since it always must be `gs://${PROJECT_ID}-input`
 
-
-## Configuration
-* Sample run configuration file is uploaded as `gs://$PROJECT_ID-input/config.json`  during the setup step.
-* Batch configuration file describing amount of jobs in parallel and maximum job count for a run is defined in `gs://$PROJECT_ID-input/batch_config.json` file during the setup step.
-These file can be modified in order to adjust the pipeline execution.
-
-ORA files in the same directory - are combined in a single command.
-Each CRAM file - is a separate command. 
-
-Sometimes for ora group files (which belong to the same directory) you want to change `config.json` settings per run. This could be done, by adding local `config.json` file into the same directory along with ora files.
-For example, if ORA files are located in the  `gs://$PROJECT_ID-input/john/test-run1` location, system will first check if there is a local `config.json` file inside `test-run1` and if not, will check the parent directories until it reaches the top input bucket..
-This allows multiple users to be using same input bucket, while having different configuration per each individual job run.
-Notice, that no merging is done.
-
-batch_config.json is a global setting for the run and is expected to be inside the directory in which START_PIPELINE is triggered.  
 ## Troubleshooting
 
 ### Exhausting ssh login profile
