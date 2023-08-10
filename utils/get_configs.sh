@@ -34,6 +34,7 @@ echo "Preparing config files"
 # CRAM
 substitute "${WDIR}/../config/cram/cram_config_310.sample.json" "${WDIR}/../config/cram/cram_config_310.json"
 substitute "${WDIR}/../config/cram/cram_config_378.sample.json" "${WDIR}/../config/cram/cram_config_378.json"
+substitute "${WDIR}/../config/cram/cram_config_378o.sample.json" "${WDIR}/../config/cram/cram_config_378o.json"
 substitute "${WDIR}/../config/cram/cram_config_403.sample.json" "${WDIR}/../config/cram/cram_config_403.json"
 substitute "${WDIR}/../config/cram/NA12878_batch.sample.txt" "${WDIR}/../config/cram/NA12878_batch.txt"
 substitute "${WDIR}/../config/cram/batch_config_403.sample.json" "${WDIR}/../config/cram/batch_config_403.json"
