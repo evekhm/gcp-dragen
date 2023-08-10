@@ -1,8 +1,8 @@
 {
     "dragen_options": {
         "--force": "",
-        "-r": "s3://__DATA_BUCKET__/References/hg38+alt_masked+cnv+graph+hla+rna-8-r2_0-1",
-        "--output-directory": "s3://__OUT_BUCKET__/3_78/aggregation/<sample-id>/<date>",
+        "-r": "s3://__DATA_BUCKET__/References/hg38_hash_3.7.8",
+        "--output-directory": "s3://__OUT_BUCKET__/3_78/aggregation-o/<sample-id>/<date>",
         "--intermediate-results-dir": "/tmp",
         "--output-file-prefix": "<sample-id>",
         "--vc-sample-name": "<sample-id>",
@@ -23,7 +23,7 @@
         "--qc-coverage-reports-2": "cov_report ",
         "--qc-coverage-region-3": "s3://__DATA_BUCKET__/References/PGx_singleSite_GRCh38_09nov2020.bed ",
         "--qc-coverage-reports-3": "cov_report ",
-        "--vc-hard-filter": "'DRAGENHardQUAL:all:QUAL<5.0;LowDepth:all:DP<=1'",
+        "--vc-hard-filter": "\"'DRAGENHardQUAL:all:QUAL<5.0;LowDepth:all:DP<=1'\"",
         "--qc-coverage-ignore-overlaps": "true",
         "--qc-coverage-count-soft-clipped-bases": "true",
         "--read-trimmers": "polyg",
