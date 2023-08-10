@@ -23,6 +23,7 @@
         "--qc-coverage-reports-2": "cov_report ",
         "--qc-coverage-region-3": "s3://__DATA_BUCKET__/References/PGx_singleSite_GRCh38_09nov2020.bed ",
         "--qc-coverage-reports-3": "cov_report ",
+        "vc-hard-filter": "'DRAGENHardQUAL:all:QUAL<5.0;LowDepth:all:DP<=1'",
         "--qc-coverage-ignore-overlaps": "true",
         "--qc-coverage-count-soft-clipped-bases": "true",
         "--read-trimmers": "polyg",
@@ -30,7 +31,7 @@
     },
     "jarvice_options": {
         "entrypoint": "/bin/bash",
-        "jxe_app": "illumina-dragen_4_0_3n",
+        "jxe_app": "illumina-dragen_3_7_8n",
         "image_uri": "us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
     }
 }
