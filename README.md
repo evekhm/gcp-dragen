@@ -119,6 +119,8 @@ There are sample configuration files generated to inspect:
   * References `gs://$PROJECT_ID-config/cram_config_403.json` config
 * $PROJECT_ID-input/cram_test/310/batch_config.json  - to Run cram jobs using 3.10 version
   * References `gs://$PROJECT_ID-config/cram_config_310.json` config
+* $PROJECT_ID-input/cram_test/378/batch_config.json  - to Run cram jobs using 3.78~~~~ version
+  * References `gs://$PROJECT_ID-config/cram_config_378.json` config
 * $PROJECT_ID-input/fastq_test/batch_config.json     - to Run fastq job using 4.03 version
   * References `gs://$PROJECT_ID-config/fastq_config.json` config
 
@@ -138,6 +140,7 @@ Sample scripts to trigger for execution (to be run from the Cloud Shell):
 
 * ./run_cram_403.sh - to trigger 4.03 execution of cram jobs (using `$PROJECT_ID-input/cram_test/403/batch_config.json`)
 * ./run_fastq_403.sh - to trigger fastq 4.03 execution (using `$PROJECT_ID-input/fastq_test/batch_config.json`)
+* ./run_cram_378.sh - to trigger 3.78 execution for cram sample (using `$PROJECT_ID-input/cram_test/378/batch_config.json`)
 
 ### From shell
 Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder_path]` directory:
@@ -165,6 +168,27 @@ Clean up service account ssh keys:
 
 The command above will activate service account and clean up its keys.
 
+
+## Supported versions
+
+Following dragen `VERSION`(s) are supported:
+```shell
+ "jarvice_options": {
+        "entrypoint": "/bin/bash",
+        "jxe_app": "VERSION",
+        "image_uri": "us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
+    }
+```
+
+**3.10.4** version of DRAGEN:
+* "illumina-dragen_3_10_4n"
+
+**3.7.8** version:
+* "illumina-dragen_3_7_8n"
+
+
+**4.0.3** version of DRAGEN
+* "illumina-dragen_4_0_3n"
 
 
 ## References
