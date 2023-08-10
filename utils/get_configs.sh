@@ -43,6 +43,7 @@ substitute "${WDIR}/../config/cram/batch_config_378.sample.json" "${WDIR}/../con
 
 gsutil cp "${WDIR}/../config/cram/cram_config_310.json" gs://"$CONFIG_BUCKET_NAME"/
 gsutil cp "${WDIR}/../config/cram/cram_config_403.json" gs://"$CONFIG_BUCKET_NAME"/
+gsutil cp "${WDIR}/../config/cram/cram_config_378.json" gs://"$CONFIG_BUCKET_NAME"/
 gsutil cp "${WDIR}/../config/cram/batch_config_403.json" gs://"$INPUT_BUCKET_NAME/cram_test/403/batch_config.json"
 gsutil cp "${WDIR}/../config/cram/batch_config_310.json" gs://"$INPUT_BUCKET_NAME/cram_test/310/batch_config.json"
 gsutil cp "${WDIR}/../config/cram/batch_config_378.json" gs://"$INPUT_BUCKET_NAME/cram_test/378/batch_config.json"
