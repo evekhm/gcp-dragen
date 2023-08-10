@@ -2,7 +2,7 @@
     "dragen_options": {
         "--force": "",
         "-r": "s3://__DATA_BUCKET__/References/hg38+alt_masked+cnv+graph+hla+rna-8-r2_0-1",
-        "--output-directory": "s3://__OUT_BUCKET__/4_03/aggregation/<sample-id>/<date>",
+        "--output-directory": "s3://__OUT_BUCKET__/3_78/aggregation/<sample-id>/<date>",
         "--intermediate-results-dir": "/tmp",
         "--output-file-prefix": "<sample-id>",
         "--enable-map-align": "true",
