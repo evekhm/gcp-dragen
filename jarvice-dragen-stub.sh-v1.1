@@ -189,7 +189,7 @@ S3_ARGS=""
 [ -n "$S3_SECRET_KEY" ] && S3_ARGS="$S3_ARGS --s3-secret-key $S3_SECRET_KEY "
 
 UNKNOWN_ARGS=($UNKNOWN_ARGS)
-echo $GCLOUD compute ssh --ssh-key-expire-after 180m\
+$GCLOUD compute ssh --ssh-key-expire-after 180m\
     --project "$GCLOUD_PROJECT" \
     --zone "$GCLOUD_ZONE" \
     ubuntu@${GCLOUD_INSTANCE} -- \
@@ -197,4 +197,3 @@ echo $GCLOUD compute ssh --ssh-key-expire-after 180m\
     --username "$JXE_USERNAME" --apikey "$JXE_APIKEY" --dragen-app "$JXE_APP" \
     ${UNKNOWN_ARGS[@]} -- $S3_ARGS $*
 
-gcloud batch jobs list
