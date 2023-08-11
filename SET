@@ -14,7 +14,8 @@ export JXE_APP="illumina-dragen_4_0_3n"
 
 
 #export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:dev"
-export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
+export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc.2"
 
 # Configuration
 

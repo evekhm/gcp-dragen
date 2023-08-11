@@ -31,7 +31,7 @@
     "jarvice_options": {
         "entrypoint": "/bin/bash",
         "jxe_app": "illumina-dragen_3_10_4n",
-        "image_uri": "us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
+        "image_uri": "__IMAGE__"
     }
 }
 
