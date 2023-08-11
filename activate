@@ -14,9 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/../SET
-
-echo "Creating Service Account Key for ${JOB_SERVICE_ACCOUNT}"
+source "${DIR}"/SET
 export KEY=${PROJECT_ID}_${SA_JOB_NAME}.json
 
 if [ -f "$KEY" ] && [ -s "$KEY" ]; then
@@ -27,12 +25,4 @@ else
           --iam-account=${JOB_SERVICE_ACCOUNT}
 fi
 
-
-echo "Activating Service Account"
 gcloud auth activate-service-account --key-file ${KEY}
-
-echo "Cleaning up ssh keys"
-for i in $(gcloud compute os-login ssh-keys list --format="table[no-heading](value.fingerprint)"); do
-  echo $i;
-  gcloud compute os-login ssh-keys remove --key $i || true;
-done
