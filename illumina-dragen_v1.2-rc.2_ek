@@ -1,18 +1,5 @@
 #!/bin/bash
-set -e
-GCLOUD_PROJECT=
-GCLOUD_IMAGE=atos-illumina-jxe-stub-rc
-GCLOUD_IMAGE_PROJECT=atos-illumina-public
-GCLOUD_MACHINE=n1-standard-1
-GCLOUD_ZONE=us-central1-a
-GCLOUD_NETWORK=
-GCLOUD_SUBNET=
-GCLOUD_INSTANCE=dragen
-JXE_USERNAME=
-JXE_APIKEY=
-JXE_APP=
-S3_ACCESS_KEY=
-S3_SECRET_KEY=
+
 UNKNOWN_ARGS=""
 
 function usage {
