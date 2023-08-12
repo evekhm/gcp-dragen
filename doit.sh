@@ -14,4 +14,4 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-"${DIR}"/call_with_params_cram.sh ./illumina-dragen_v1.2-rc.2_ek
+"${DIR}"/call_with_params.sh ./illumina-dragen_v1.2-rc.2_ek
