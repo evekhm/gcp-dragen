@@ -177,6 +177,9 @@ function cleanup_gcp() {
         --zone "$2" \
         "$3"
     rm -rf $tmp_sshkey $HOME/.ssh/google_compute_known_hosts
+    echo "--->" $tmp_sshkey
+    gcloud compute os-login ssh-keys remove --key $tmp_sshkey
+
     exit
 }
 trap "cleanup_gcp ${GCLOUD_PROJECT} ${GCLOUD_ZONE} ${GCLOUD_INSTANCE}" EXIT
@@ -197,6 +200,7 @@ S3_ARGS=""
 
 UNKNOWN_ARGS=($UNKNOWN_ARGS)
 $GCLOUD compute ssh \
+    --ssh-key-expire-after=180m \
     --project "$GCLOUD_PROJECT" \
     --zone "$GCLOUD_ZONE" \
     --ssh-key-file $tmp_sshkey/dragen \
