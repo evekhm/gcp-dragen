@@ -170,9 +170,6 @@ function cleanup_gcp() {
         --project "$1" \
         --zone "$2" \
         "$3"
-    rm -rf $tmp_sshkey $HOME/.ssh/google_compute_known_hosts
-    echo "--->" $tmp_sshkey
-    gcloud compute os-login ssh-keys remove --key $tmp_sshkey
     exit
 }
 trap "cleanup_gcp ${GCLOUD_PROJECT} ${GCLOUD_ZONE} ${GCLOUD_INSTANCE}" EXIT
@@ -192,10 +189,9 @@ S3_ARGS=""
 [ -n "$S3_SECRET_KEY" ] && S3_ARGS="$S3_ARGS --s3-secret-key $S3_SECRET_KEY "
 
 UNKNOWN_ARGS=($UNKNOWN_ARGS)
-$GCLOUD compute ssh --ssh-key-expire-after 180m\
+$GCLOUD compute ssh \
     --project "$GCLOUD_PROJECT" \
     --zone "$GCLOUD_ZONE" \
-    --ssh-key-file $tmp_sshkey/dragen \
     ubuntu@${GCLOUD_INSTANCE} -- \
     /opt/JARVICE/bin/jarvice-dragen-client \
     --username "$JXE_USERNAME" --apikey "$JXE_APIKEY" --dragen-app "$JXE_APP" \

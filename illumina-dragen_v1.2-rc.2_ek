@@ -157,6 +157,7 @@ done
 [ -z "$JXE_APP" ] && echo 'DRAGEN application name required' && usage && exit 1
 
 tmp_file=$(mktemp "${GCLOUD_INSTANCE}-XXXX")
+tmp_sshkey=$(mktemp -d)
 GCLOUD_INSTANCE="$(echo $tmp_file | awk '{print tolower($0)}')"
 rm -rf $tmp_file
 
@@ -175,6 +176,7 @@ function cleanup_gcp() {
         --project "$1" \
         --zone "$2" \
         "$3"
+    rm -rf $tmp_sshkey $HOME/.ssh/google_compute_known_hosts
     exit
 }
 trap "cleanup_gcp ${GCLOUD_PROJECT} ${GCLOUD_ZONE} ${GCLOUD_INSTANCE}" EXIT
@@ -197,6 +199,7 @@ UNKNOWN_ARGS=($UNKNOWN_ARGS)
 $GCLOUD compute ssh \
     --project "$GCLOUD_PROJECT" \
     --zone "$GCLOUD_ZONE" \
+    --ssh-key-file $tmp_sshkey/dragen \
     ubuntu@${GCLOUD_INSTANCE} -- \
     /opt/JARVICE/bin/jarvice-dragen-client \
     --username "$JXE_USERNAME" --apikey "$JXE_APIKEY" --dragen-app "$JXE_APP" \
