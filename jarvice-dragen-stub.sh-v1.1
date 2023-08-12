@@ -170,6 +170,9 @@ function cleanup_gcp() {
         --project "$1" \
         --zone "$2" \
         "$3"
+    rm -rf $tmp_sshkey $HOME/.ssh/google_compute_known_hosts
+    echo "--->" $tmp_sshkey
+    gcloud compute os-login ssh-keys remove --key $tmp_sshkey
     exit
 }
 trap "cleanup_gcp ${GCLOUD_PROJECT} ${GCLOUD_ZONE} ${GCLOUD_INSTANCE}" EXIT
