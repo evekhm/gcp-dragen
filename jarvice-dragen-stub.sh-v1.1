@@ -195,6 +195,7 @@ UNKNOWN_ARGS=($UNKNOWN_ARGS)
 $GCLOUD compute ssh --ssh-key-expire-after 180m\
     --project "$GCLOUD_PROJECT" \
     --zone "$GCLOUD_ZONE" \
+    --ssh-key-file $tmp_sshkey/dragen \
     ubuntu@${GCLOUD_INSTANCE} -- \
     /opt/JARVICE/bin/jarvice-dragen-client \
     --username "$JXE_USERNAME" --apikey "$JXE_APIKEY" --dragen-app "$JXE_APP" \
