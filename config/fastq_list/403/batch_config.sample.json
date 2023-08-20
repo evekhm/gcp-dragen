@@ -1,0 +1,15 @@
+{
+    "run_options": {
+      "parallelism": "5",
+      "max_run_duration": "7200s",
+      "max_retry_count": 2
+    },
+    "input_options": {
+        "input_type": "fastq-list",
+        "input_list": "gs://__IN_BUCKET__/fastq_list/input_list/fastq_list.csv",
+        "config": "gs://__CONFIG_BUCKET__/fastq_list_config.json"
+    },
+    "output_options": {
+      "jobs_created": "gs://__JOBS_INFO__"
+    }
+}

@@ -25,4 +25,4 @@ else
 fi
 
 echo "Triggering Pipeline for $DEST"
-gsutil cp "${DIR}"/cloud_function/START_PIPELINE "${DEST}"
+gsutil cp "${DIR}/${START_PIPELINE_FILE}" "${DEST}"

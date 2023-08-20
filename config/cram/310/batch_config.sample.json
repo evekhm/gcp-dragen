@@ -1,0 +1,15 @@
+{
+    "run_options": {
+      "parallelism": "5",
+      "max_run_duration": "7200s",
+      "max_retry_count": 2
+    },
+    "input_options": {
+        "input_type": "cram",
+        "input_list": "gs://__IN_BUCKET__/cram/input_list/NA12878_batch.txt",
+        "config": "gs://__CONFIG_BUCKET__/cram_config_310.json"
+    },
+  "output_options": {
+    "jobs_created": "gs://__JOBS_INFO__"
+  }
+}

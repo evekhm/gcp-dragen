@@ -115,13 +115,13 @@ This command executes following steps:
 ## Configuration
 There are sample configuration files generated to inspect:
 
-* $PROJECT_ID-input/cram_test/403/batch_config.json  - to Run cram jobs using 4.03 version
+* $PROJECT_ID-input/cram/403/batch_config.json  - to Run cram jobs using 4.03 version
   * References `gs://$PROJECT_ID-config/cram_config_403.json` config
-* $PROJECT_ID-input/cram_test/310/batch_config.json  - to Run cram jobs using 3.10 version
+* $PROJECT_ID-input/cram/310/batch_config.json  - to Run cram jobs using 3.10 version
   * References `gs://$PROJECT_ID-config/cram_config_310.json` config
-* $PROJECT_ID-input/cram_test/378/batch_config.json  - to Run cram jobs using 3.78~~~~ version
+* $PROJECT_ID-input/cram/378/batch_config.json  - to Run cram jobs using 3.78 version
   * References `gs://$PROJECT_ID-config/cram_config_378.json` config
-* $PROJECT_ID-input/fastq_test/batch_config.json     - to Run fastq job using 4.03 version
+* $PROJECT_ID-input/fastq~~~~/batch_config.json     - to Run fastq job using 4.03 version
   * References `gs://$PROJECT_ID-config/fastq_config.json` config
 
 Batch configuration file describing amount of jobs in parallel and maximum job count for a run is must be named `batch_config.json`.
@@ -134,7 +134,7 @@ Note (based on the suer requirements):
 
 ## Trigger the pipeline
 
-Drop empty file named  `START_PIPELINE` (see  `cloud_function/START_PIPELINE`)  into the folder containing `batch_config.json` file (Must be inside `gs://${PROJECT_ID}-input` bucket, since it is configured to listen to the Pub/Sub Cloud Storage event )
+Drop empty file named  `START_PIPELINE` (see  `cloud_functions/run_batch/START_PIPELINE`)  into the folder containing `batch_config.json` file (Must be inside `gs://${PROJECT_ID}-input` bucket, since it is configured to listen to the Pub/Sub Cloud Storage event )
 
 Sample scripts to trigger for execution (to be run from the Cloud Shell):
 

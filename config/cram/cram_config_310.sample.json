@@ -2,10 +2,10 @@
     "dragen_options": {
         "--force": "",
         "-r": "s3://__DATA_BUCKET__/References/hg38_alt_masked_graph_v2+cnv+graph+rna-8-1644018559",
-        "--output-directory": "s3://__OUT_BUCKET__/3_10/aggregation/<sample-id>/<date>",
+        "--output-directory": "s3://__OUT_BUCKET__/3_10/aggregation/${SAMPLE_ID}/<date>",
         "--intermediate-results-dir": "/local/scratch",
-        "--output-file-prefix": "<sample-id>",
-        "--vc-sample-name": "<sample-id>",
+        "--output-file-prefix": "${SAMPLE_ID}",
+        "--vc-sample-name": "${SAMPLE_ID}",
         "--enable-map-align": "true",
         "--enable-map-align-output": "true",
         "--output-format": "CRAM",

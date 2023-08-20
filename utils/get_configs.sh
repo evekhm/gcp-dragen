@@ -18,49 +18,46 @@ WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${WDIR}/../SET"
 
 function substitute(){
-  INPUT_FILE=$1
-  OUTPUT_FILE=$2
+  INPUT_FILE="$1"
+  echo "Substituting $INPUT_FILE"
+  OUTPUT_FILE="${INPUT_FILE//.sample/}"
+#  echo $INPUT_FILE
+#  echo $OUTPUT_FILE
   sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
       s|__JXE_APP__|'"$JXE_APP"'|g;
       s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
       s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
       s|__CONFIG_BUCKET__|'"$CONFIG_BUCKET_NAME"'|g;
       s|__DATA_BUCKET__|'"$DATA_BUCKET_NAME"'|g;
+      s|__JOBS_INFO__|'"$JOBS_INFO"'|g;
       ' "${INPUT_FILE}" > "${OUTPUT_FILE}"
+}
+
+function copy_files(){
+  f=$1
+  DIRNAME=$(dirname "$f")
+  BASENAME=$(basename "$DIRNAME")
+  PARENTDIR="$(dirname "$DIRNAME")"
+  PARENT=$(basename "$PARENTDIR")
+  echo $DIRNAME $BASENAME $PARENT
+  GCS="gs://$INPUT_BUCKET_NAME/$PARENT/$BASENAME/"
+  echo "Copying $f to $GCS"
+  gsutil cp  "$f" "$GCS"
 }
 
 echo "Preparing config files"
 
-# CRAM
-substitute "${WDIR}/../config/cram/cram_config_310.sample.json" "${WDIR}/../config/cram/cram_config_310.json"
-substitute "${WDIR}/../config/cram/cram_config_378.sample.json" "${WDIR}/../config/cram/cram_config_378.json"
-substitute "${WDIR}/../config/cram/cram_config_378o.sample.json" "${WDIR}/../config/cram/cram_config_378o.json"
-substitute "${WDIR}/../config/cram/cram_config_403.sample.json" "${WDIR}/../config/cram/cram_config_403.json"
-substitute "${WDIR}/../config/cram/NA12878_batch.sample.txt" "${WDIR}/../config/cram/NA12878_batch.txt"
-substitute "${WDIR}/../config/cram/batch_config_403.sample.json" "${WDIR}/../config/cram/batch_config_403.json"
-substitute "${WDIR}/../config/cram/batch_config_310.sample.json" "${WDIR}/../config/cram/batch_config_310.json"
-substitute "${WDIR}/../config/cram/batch_config_378.sample.json" "${WDIR}/../config/cram/batch_config_378.json"
+"${WDIR}"/create_input_samples_list.sh 10 "${WDIR}"/../config/cram/input_list/1000_samples.txt
 
+# Substitute all .sample
+export -f substitute
+find "${WDIR}/../config" -name '*.sample.*'  -exec bash -c 'substitute "$0"' {} \;
 
-gsutil cp "${WDIR}/../config/cram/cram_*.json" gs://"$CONFIG_BUCKET_NAME"/
-gsutil cp "${WDIR}/../config/cram/batch_config_310.json" gs://"$INPUT_BUCKET_NAME/cram_test/310/batch_config.json"
-gsutil cp "${WDIR}/../config/cram/batch_config_378.json" gs://"$INPUT_BUCKET_NAME/cram_test/378/batch_config.json"
-gsutil cp "${WDIR}/../config/cram/batch_config_403.json" gs://"$INPUT_BUCKET_NAME/cram_test/403/batch_config.json"
-gsutil cp "${WDIR}/../config/cram/NA12878_batch.txt" gs://"$INPUT_BUCKET_NAME"/cram_test/
+#Copy config.json files to config bucket
+find "${WDIR}/../config" -name "*.json" -type f ! -name '*sample.json' ! -name 'batch_*.json' | gsutil -m cp -I gs://"$CONFIG_BUCKET_NAME"
 
+# Substitute and copy batch_config files
+export -f copy_files
+find "${WDIR}/../config" -type f ! -name '*.sample.*' \( -name '*.txt' -o -name 'batch_*.json' -o -name '*.csv' \) -exec bash -c 'copy_files "$0"' {} \;
 
-# FASTQ LIST
-substitute "${WDIR}/../config/fastq_list/fastq_list_config.sample.json" "${WDIR}/../config/fastq_list/fastq_list_config.json"
-substitute "${WDIR}/../config/fastq_list/batch_config.sample.json" "${WDIR}/../config/fastq_list/batch_config.json"
-
-gsutil cp "${WDIR}/../config/fastq_list/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/
-gsutil cp "${WDIR}/../config/fastq_list/fastq_list.csv" gs://"$INPUT_BUCKET_NAME"/fastq_list_test/
-gsutil cp "${WDIR}/../config/fastq_list/fastq_list_config.json" gs://"$CONFIG_BUCKET_NAME"/
-
-
-# FASTQ
-substitute "${WDIR}/../config/fastq/fastq_config.sample.json" "${WDIR}/../config/fastq/fastq_config.json"
-substitute "${WDIR}/../config/fastq/batch_config.sample.json" "${WDIR}/../config/fastq/batch_config.json"
-
-gsutil cp "${WDIR}/../config/fastq/fastq_config.json" gs://"$CONFIG_BUCKET_NAME"/
-gsutil cp "${WDIR}/../config/fastq/batch_config.json" gs://"$INPUT_BUCKET_NAME"/fastq_test/
+gsutil cp "${WDIR}/../data/status_header.csv" gs://"$OUTPUT_BUCKET_NAME/status/"

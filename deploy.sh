@@ -19,10 +19,10 @@ gcloud config set project $PROJECT_ID
 
 source "${DIR}"/SET
 
-$printf "Deploying Cloud Function=[$SOURCE_ENTRY_POINT]..."
-gcloud functions deploy $CLOUD_FUNCTION_NAME \
+$printf "Deploying Cloud Function=[$CLOUD_FUNCTION_NAME_RUN_BATCH]..."
+gcloud functions deploy $CLOUD_FUNCTION_NAME_RUN_BATCH \
     --region=$GCLOUD_REGION \
-    --runtime $RUNTIME --source="${SOURCE_DIR}" \
+    --runtime $RUNTIME --source="${SOURCE_DIR_RUN_BATCH}" \
     --service-account=$JOB_SERVICE_ACCOUNT \
     --timeout=400 \
     --ingress-settings=${INGRESS_SETTINGS} \
@@ -35,10 +35,19 @@ gcloud functions deploy $CLOUD_FUNCTION_NAME \
     --set-env-vars TRIGGER_FILE_NAME=$TRIGGER_FILE_NAME \
     --set-env-vars S3_SECRET=$S3_SECRET \
     --set-env-vars LICENSE_SECRET=$LICENSE_SECRET \
+    --set-env-vars PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE=$PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE \
     --trigger-resource=gs://${INPUT_BUCKET_NAME} \
     --trigger-event=google.storage.object.finalize
 
-
-
-
+gcloud functions deploy ${CLOUD_FUNCTION_NAME_GET_STATUS} \
+    --region=$GCLOUD_REGION \
+    --trigger-topic ${PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE} \
+    --runtime $RUNTIME --source="${SOURCE_DIR_GET_STATUS}" \
+    --entry-point=${SOURCE_ENTRY_POINT_RUN_BATCH} \
+    --service-account=$JOB_SERVICE_ACCOUNT \
+    --ingress-settings=${INGRESS_SETTINGS} \
+    --set-env-vars GCLOUD_REGION=$GCLOUD_REGION \
+    --set-env-vars JOBS_INFO=$JOBS_INFO \
+    --set-env-vars BIGQUERY_DB=$BIGQUERY_DB \
+    --set-env-vars PROJECT_ID=$PROJECT_ID
 

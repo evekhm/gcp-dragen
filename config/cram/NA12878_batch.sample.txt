@@ -1,2 +1,0 @@
-collaborator_sample_id	cram_file_ref
-NA12878	s3://__DATA_BUCKET__/NA12878/NA12878.cram

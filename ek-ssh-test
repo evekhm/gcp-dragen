@@ -1,0 +1,67 @@
+#!/bin/bash
+
+
+GCLOUD=$(type -p gcloud)
+if [ -z "$GCLOUD" ]; then
+    cat <<EOF
+Could not find 'gcloud' in PATH. It may not be installed.
+EOF
+    exit 1
+fi
+
+FLOCK=$(type -p flock)
+if [ -z "$FLOCK" ]; then
+    cat <<EOF
+Could not find 'flock' in PATH. It may not be installed.
+EOF
+    exit 1
+fi
+
+LOCK_FILE="$HOME/.gcloud.lock"
+
+
+tmp_file=$(mktemp "${GCLOUD_INSTANCE}-XXXX")
+tmp_sshkey=$(mktemp -d)
+GCLOUD_INSTANCE="$(echo $tmp_file | awk '{print tolower($0)}')"
+
+
+$FLOCK "$LOCK_FILE" $GCLOUD compute instances create "$GCLOUD_INSTANCE" \
+    --project "$GCLOUD_PROJECT" \
+    --image "$GCLOUD_IMAGE" \
+    --image-project "$GCLOUD_IMAGE_PROJECT" \
+    --machine-type "$GCLOUD_MACHINE" \
+    --zone "$GCLOUD_ZONE" \
+    --network "$GCLOUD_NETWORK" \
+    --subnet "$GCLOUD_SUBNET"
+
+ssh-keygen -f $tmp_sshkey/$tmp_file -P ""
+
+
+function cleanup_gcp() {
+    echo "Cleanup Google VM"
+    $FLOCK "$LOCK_FILE" $GCLOUD compute instances delete -q \
+        --project "$1" \
+        --zone "$2" \
+        "$3"
+    rm -rf  $HOME/.ssh/google_compute_known_hosts
+    gcloud compute os-login ssh-keys remove --key-file $tmp_sshkey/$tmp_file.pub  > /dev/null
+    rm -rf $tmp_sshkey
+    exit
+}
+trap "cleanup_gcp ${GCLOUD_PROJECT} ${GCLOUD_ZONE} ${GCLOUD_INSTANCE}" EXIT
+# wait for ssh to come up
+IP=$($FLOCK "$LOCK_FILE" $GCLOUD --project "$GCLOUD_PROJECT" compute instances list \
+    --filter "name=${GCLOUD_INSTANCE}" \
+    --format="table(
+        networkInterfaces[].accessConfigs[0].natIP.notnull().list():label=
+        )" 2>/dev/null)
+echo "Waiting for ssh to come up. Ctrl+C to abort"
+while ! 2> /dev/null > /dev/tcp/$IP/22; do
+    sleep 15
+done
+
+$GCLOUD compute ssh \
+    --project "$GCLOUD_PROJECT" \
+    --zone "$GCLOUD_ZONE" \
+    --ssh-key-file $tmp_sshkey/$tmp_file \
+    ubuntu@${GCLOUD_INSTANCE}

@@ -15,7 +15,11 @@ export JXE_APP="illumina-dragen_3_7_8n"
 
 #export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:dev"
 #export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc"
-export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc.2"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc.2"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc.3"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc.4"
+#export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v1.2-rc.4"
+export IMAGE_URI="us-docker.pkg.dev/jarvice/images/illumina-dragen:v2.0-rc"
 
 # Configuration
 
@@ -35,30 +39,45 @@ export GCLOUD_INSTANCE=dragen
 
 export DATA_BUCKET_NAME=${DATA_BUCKET_NAME:-${PROJECT_ID}-data}
 export INPUT_BUCKET_NAME=${PROJECT_ID}-input
-export OUTPUT_BUCKET_NAME=${OUTPUT_BUCKET_NAME:-${PROJECT_ID}-output}
+export OUTPUT_BUCKET_NAME=${PROJECT_ID}-output
 export CONFIG_BUCKET_NAME=${PROJECT_ID}-config
 
 export GCLOUD_NETWORK=default
 export GCLOUD_SUBNET=default
+
+# Batch
 export JOB_NAME_SHORT="job-dragen"
 export JOB_NAME="projects/${PROJECT_ID}/locations/${GCLOUD_REGION}/jobs/${JOB_NAME_SHORT}"
 export SA_JOB_NAME=illumina-script-sa
 export JOB_SERVICE_ACCOUNT=${SA_JOB_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
 export SA_NAME_STORAGE=storage-admin
 export SA_EMAIL_STORAGE=${SA_NAME_STORAGE}@${PROJECT_ID}.iam.gserviceaccount.com
+export JOBS_INFO=${OUTPUT_BUCKET_NAME}/jobs_created
+
 
 # Secrets
 export S3_SECRET="s3_hmac_secret_key"
 export LICENSE_SECRET="license_secret_key"
 
-# Cloud Function Params
-export SOURCE_DIR="${DIR}/cloud_function"  # Cloud Function Directory - relative (main.py)
-export SOURCE_ENTRY_POINT='run_job' # Entry point for Cloud Function
-export RUNTIME='python37' # The only properly Supported for Runtime Environment
-export PUBSUB_COMMAND_TOPIC='cloud-function-trigger'
-export CLOUD_FUNCTION_NAME='run_dragen_job'
+# Cloud Function Run Batch
+export SOURCE_DIR_RUN_BATCH="${DIR}/cloud_functions/run_batch"  # Cloud Function Directory - relative (main.py)
+export SOURCE_ENTRY_POINT_RUN_BATCH='run_job' # Entry point for Cloud Function
+export RUNTIME='python310' # The only properly Supported for Runtime Environment
+export CLOUD_FUNCTION_NAME_RUN_BATCH='run_dragen_job'
 export INGRESS_SETTINGS=internal-and-gclb
+export START_PIPELINE_FILE="${SOURCE_DIR_RUN_BATCH}/START_PIPELINE"
 
+# Cloud Function Get Status
+export SOURCE_DIR_GET_STATUS="${DIR}/cloud_functions/get_status"  # Cloud Function Directory - relative (main.py)
+export SOURCE_ENTRY_POINT_RUN_BATCH='get_status'
+export PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE="job-dragen-task-state-change-topic"
+export CLOUD_FUNCTION_NAME_GET_STATUS='get_status'
+
+
+# BIG QUERY
+export DATASET="dragen_illumina"
+export TABLE_ID="samples_status"
+export BIGQUERY_DB="${DATASET}.${TABLE_ID}"
 
 echo "Using: "
 echo "      PROJECT_ID=$PROJECT_ID"

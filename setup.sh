@@ -18,31 +18,42 @@ printf="$DIR/utils/print"
 LOG="$DIR/setup.log"
 filename=$(basename $0)
 timestamp=$(date +"%m-%d-%Y_%H:%M:%S")
-$printf "$timestamp - Running $filename ... " | tee "$LOG"
+$printf "$timestamp - Running $filename ...  ( DISABLE_POLICY=$DISABLE_POLICY)" | tee "$LOG"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo PROJECT_ID variable is not set. | tee -a "$LOG"
   exit
 fi
 
-if [[ -z "${ILLUMINA_LICENSE}" ]]; then
-  echo ILLUMINA_LICENSE variable is not set. | tee -a "$LOG"
-  exit
-fi
-
-if [[ -z "${JXE_APIKEY}" ]]; then
-  echo JXE_APIKEY variable is not set. | tee -a "$LOG"
-  exit
-fi
-
-if [[ -z "${JXE_USERNAME}" ]]; then
-  echo JXE_USERNAME variable is not set. | tee -a "$LOG"
-  exit
+if [[ -n "${DISABLE_POLICY}" ]]; then
+    $printf "The script will try to automatically enable all required Org policies since env variable is set: DISABLE_POLICY=$DISABLE_POLICY" | tee -a "$LOG"
+else
+    $printf "The script will skip automatic setting of the required Org policies. Please verify manually that all policies are set as required (Check README.md) " | tee -a "$LOG"
+    $printf "If you have the Org policy admin role, you could try enabling policies automatically by setting environment variable: DISABLE_POLICY=on" | tee -a "$LOG"
 fi
 
 gcloud config set project $PROJECT_ID
 
 source "${DIR}"/SET
+
+function create_pubsub_topic(){
+  TOPIC_ID=$1
+
+  if gcloud pubsub topics list 2>/dev/null | grep "$TOPIC_ID"; then
+    $printf "Topic [$TOPIC_ID] already exists - skipping step" INFO
+  else
+    $printf "Creating topic [$TOPIC_ID]..." INFO
+    gcloud pubsub topics create "$TOPIC_ID"
+  fi
+
+  $printf "Adding required permissions for service accounts" INFO
+  gcloud pubsub topics add-iam-policy-binding "$TOPIC_ID" \
+      --member="serviceAccount:$JOB_SERVICE_ACCOUNT"\
+      --role="roles/pubsub.editor"
+  gcloud pubsub topics add-iam-policy-binding "$TOPIC_ID" \
+      --member="serviceAccount:$JOB_SERVICE_ACCOUNT"\
+      --role="roles/pubsub.publisher"
+}
 
 function create_bucket(){
   bucket_name=$1
@@ -53,6 +64,27 @@ function create_bucket(){
       gsutil mb gs://$bucket_name
   fi
 }
+
+function create_bq_dt(){
+  $printf "Creating BigQuery Dataset=${DATASET} and Table=${TABLE_ID} ..."
+  if bq --location="${REGION}" ls | grep  "${DATASET}"; then
+    $printf "Dataset already exists [${DATASET}] - skipping step" INFO
+  else
+    bq --location="${REGION}" mk --dataset "${DATASET}"
+  fi
+
+  if bq --location="${REGION}" ls "${DATASET}" | grep  "${TABLE_ID}"; then
+    :
+  else
+    bq mk  --schema="${DIR}/data/bq_schema" --table "${DATASET}"."${TABLE_ID}"
+  fi
+  bq add-iam-policy-binding \
+     --member="serviceAccount:$JOB_SERVICE_ACCOUNT"\
+     --role="roles/bigquery.dataEditor" \
+     "${PROJECT_ID}:${DATASET}.${TABLE_ID}"
+ }
+
+
 # gcloud services list --enabled|grep -v NAME|wc -l
 
 # Enable APIs
@@ -67,9 +99,13 @@ $printf "Enabling Required APIs..."  | tee -a "$LOG"
     storage.googleapis.com \
     cloudfunctions.googleapis.com \
     cloudbuild.googleapis.com \
+    iam.googleapis.com \
+    bigquery.googleapis.com \
     cloudresourcemanager.googleapis.com"
 
-gcloud services enable orgpolicy.googleapis.com #To avoid Error for concurrent policy changes.
+if [ -n "$DISABLE_POLICY" ]; then
+  gcloud services enable orgpolicy.googleapis.com #To avoid Error for concurrent policy changes.
+fi
 
 enabled=$(gcloud services list --enabled | grep orgpolicy)
 while [ -z "$enabled" ]; do
@@ -115,6 +151,41 @@ if [ -n "$DISABLE_POLICY" ]; then
   rm  policy.yaml
 
   $printf "Finished with Org policy Update"  INFO | tee -a "$LOG"
+fi
+
+exists=$(gcloud secrets describe ${LICENSE_SECRET} 2> /dev/null)
+if [ -z "$exists" ]; then
+  if [[ -z "${ILLUMINA_LICENSE}" ]]; then
+    echo ILLUMINA_LICENSE variable is not set. | tee -a "$LOG"
+    exit
+  fi
+
+  if [[ -z "${JXE_APIKEY}" ]]; then
+    echo JXE_APIKEY variable is not set. | tee -a "$LOG"
+    exit
+  fi
+
+  if [[ -z "${JXE_USERNAME}" ]]; then
+    echo JXE_USERNAME variable is not set. | tee -a "$LOG"
+    exit
+  fi
+  $printf "Creating $LICENSE_SECRET secret..."  | tee -a "$LOG"
+  gcloud secrets create $LICENSE_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
+  echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
+  gcloud secrets versions add $LICENSE_SECRET --data-file="tmp/licsecret.json" | tee -a "$LOG"
+  rm -rf tmp/licsecret.json # delete temp file
+fi
+
+
+LICENSE_SECRET_KEY=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
+if [ -z "$LICENSE_SECRET_KEY" ] ; then
+  echo "$LICENSE_SECRET_KEY was not created properly" | tee -a "$LOG"
+  echo "Try running following command to debug:" | tee -a "$LOG"
+  echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
+  echo "  gcloud secrets versions list  $LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
+  exit
+else
+  $printf "Verified $LICENSE_SECRET secret - Success!" | tee -a "$LOG"
 fi
 
 network=$(gcloud compute networks list --filter="name=(\"$GCLOUD_NETWORK\" )" --format='get(NAME)' 2>/dev/null)
@@ -175,27 +246,7 @@ if [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_SECRET_KEY" ] ; then
   echo "  gsutil hmac list -u $SA_EMAIL_STORAGE"
   exit
 else
-  echo "Verified $S3_SECRET for HMAC keys - Success!"
-fi
-
-
-echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
-exists=$(gcloud secrets describe ${LICENSE_SECRET} 2> /dev/null)
-if [ -z "$exists" ]; then
-  $printf "Creating $LICENSE_SECRET secret..."  | tee -a "$LOG"
-  gcloud secrets create $LICENSE_SECRET --replication-policy="automatic" --project=$PROJECT_ID | tee -a "$LOG"
-fi
-gcloud secrets versions add $LICENSE_SECRET --data-file="tmp/licsecret.json" | tee -a "$LOG"
-rm -rf tmp/licsecret.json # delete temp file
-
-LICENSE_SECRET_KEY=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
-if [ -z "$LICENSE_SECRET_KEY" ] ; then
-  echo "$LICENSE_SECRET_KEY was not created properly" | tee -a "$LOG"
-  echo "Try running following command to debug:" | tee -a "$LOG"
-  echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
-  exit
-else
-  $printf "Verified $LICENSE_SECRET secret - Success!" | tee -a "$LOG"
+  $printf  "Verified $S3_SECRET for HMAC keys - Success!" | tee -a "$LOG"
 fi
 
 
@@ -253,16 +304,19 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
 #gcloud storage buckets add-iam-policy-binding  gs://"${INPUT_BUCKET_NAME}" --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" --role="roles/storage.objectViewer"  2>&1
 #gcloud storage buckets add-iam-policy-binding  gs://"${OUTPUT_BUCKET_NAME}" --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" --role="roles/storage.objectViewer"  2>&1
 
-#3 Otherwise geting 403 GET ERROR for config.json
+#3 Otherwise getting 403 GET ERROR for config.json
 gcloud projects add-iam-policy-binding $PROJECT_ID \
          --member="serviceAccount:${JOB_SERVICE_ACCOUNT}" \
          --role="roles/storage.admin"
+
+
+create_bq_dt
 
 # Creating bucket for config with versioning
 create_bucket "${CONFIG_BUCKET_NAME}"
 gsutil versioning set on "gs://${CONFIG_BUCKET_NAME}"
 
-
+create_pubsub_topic "$PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE"
 bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
 
 
