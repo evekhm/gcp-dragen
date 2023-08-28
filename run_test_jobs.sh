@@ -14,11 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-if [ -z "$PROJECT_ID" ]; then
-  echo "Setting PROJECT_ID using DEVSHELL_PROJECT_ID=$DEVSHELL_PROJECT_ID"
-  export PROJECT_ID=$DEVSHELL_PROJECT_ID
-fi
 source "${DIR}"/SET
 
-gsutil cp "${START_PIPELINE_FILE}" gs://"${INPUT_BUCKET_NAME}/cram/378/"
+#bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
+gsutil cp "${START_PIPELINE_FILE}" "${TEST_RUN_DIR}"

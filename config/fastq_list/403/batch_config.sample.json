@@ -8,8 +8,5 @@
         "input_type": "fastq-list",
         "input_list": "gs://__IN_BUCKET__/fastq_list/input_list/fastq_list.csv",
         "config": "gs://__CONFIG_BUCKET__/fastq_list_config.json"
-    },
-    "output_options": {
-      "jobs_created": "gs://__JOBS_INFO__"
     }
 }

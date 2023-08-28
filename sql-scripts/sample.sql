@@ -1,0 +1,2 @@
+SELECT job_id, job_label, task_id, status, input_path, output_path,timestamp FROM `dragen_illumina.tasks_status`
+                                                                where sample_id = @SAMPLE_ID ORDER BY job_id, task_id, timestamp

@@ -69,6 +69,8 @@ Following Google APIs need to be enabled (in case you do not have admin level ac
   * cloudfunctions.googleapis.com
   * cloudbuild.googleapis.com
   * cloudresourcemanager.googleapis.com
+  * bigquery.googleapis.com
+  * iam.googleapis.com
 
 ## GCP Setup
 
@@ -78,9 +80,9 @@ Following Google APIs need to be enabled (in case you do not have admin level ac
   export PROJECT_ID=
   ```
 
-* Point to the Cloud Storage Bucket containing Samples Data:
+* Point to the Cloud Storage Bucket containing Samples Data (leave it out, if you have not setup yet, it will create default bucket `$PROJECT_ID-data`):
   ```shell
-  export DATA_BUCKET_NAME=broad-gp-dragen-demo
+  export DATA_BUCKET_NAME=
   ```
 * Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`)to set env variables (to be used during the deployment)
   ```shell
@@ -99,7 +101,7 @@ export DISABLE_POLICY=true
   ```shell
   ./setup.sh
   ```
-> Command will take ~ 5 minutes and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
+> Command will take ~ 8 minutes and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
  
 This command executes following steps:
 * Enables required APIs
@@ -114,42 +116,337 @@ This command executes following steps:
 
 ## Configuration
 There are sample configuration files generated to inspect:
-
-* $PROJECT_ID-input/cram/403/batch_config.json  - to Run cram jobs using 4.03 version
+* $PROJECT_ID-trigger/cram/403/batch_config.json  - to Run cram jobs using 4.03 version
   * References `gs://$PROJECT_ID-config/cram_config_403.json` config
-* $PROJECT_ID-input/cram/310/batch_config.json  - to Run cram jobs using 3.10 version
-  * References `gs://$PROJECT_ID-config/cram_config_310.json` config
-* $PROJECT_ID-input/cram/378/batch_config.json  - to Run cram jobs using 3.78 version
+* $PROJECT_ID-trigger/cram/378/batch_config.json  - to Run cram jobs using 3.78 version
   * References `gs://$PROJECT_ID-config/cram_config_378.json` config
-* $PROJECT_ID-input/fastq~~~~/batch_config.json     - to Run fastq job using 4.03 version
+* $PROJECT_ID-trigger/fastq/batch_config.json     - to Run fastq job using 4.03 version
   * References `gs://$PROJECT_ID-config/fastq_config.json` config
 
-Batch configuration file describing amount of jobs in parallel and maximum job count for a run is must be named `batch_config.json`.
- 
-Inspect/modify/create new  `batch_config.json` and configuration files for the input (See samples in config )
+Batch configuration file  (batch_config.json) describes amount of jobs to be run in parallel.
 
 Note (based on the suer requirements):
 * ORA files in the same directory - are combined in a single command.
 * Each CRAM file - is a separate command.
 
 ## Trigger the pipeline
+To trigger the pipeline you need to have either `batch_config.json` file  or `jobs.csv` in the GCS directory inside `$PROJECT_ID-trigger` bucket.
 
-Drop empty file named  `START_PIPELINE` (see  `cloud_functions/run_batch/START_PIPELINE`)  into the folder containing `batch_config.json` file (Must be inside `gs://${PROJECT_ID}-input` bucket, since it is configured to listen to the Pub/Sub Cloud Storage event )
+`jobs.csv` file is in the csv format listing jobs to run, each of them having `batch_config.json` file associated.
+
+For example:
+```shell
+job1, gs://bucket-name/batch_config1.json
+job2, gs://bucket-name/batch_config2.json
+job3, gs://bucket-name/batch_config3.json
+```
+
+Drop empty file named  `START_PIPELINE` (see  `cloud_functions/run_batch/START_PIPELINE`)  into the folder as described above.
+> Must be inside `gs://${PROJECT_ID}-trigger` bucket, since it is configured to listen to the Pub/Sub Cloud Storage event.
 
 Sample scripts to trigger for execution (to be run from the Cloud Shell):
 
-* ./run_cram_403.sh - to trigger 4.03 execution of cram jobs (using `$PROJECT_ID-input/cram_test/403/batch_config.json`)
-* ./run_fastq_403.sh - to trigger fastq 4.03 execution (using `$PROJECT_ID-input/fastq_test/batch_config.json`)
-* ./run_cram_378.sh - to trigger 3.78 execution for cram sample (using `$PROJECT_ID-input/cram_test/378/batch_config.json`)
+* ./run_cram_403.sh - to trigger 4.03 execution of cram jobs (using `$PROJECT_ID-trigger/cram_test/403/batch_config.json`)
+* ./run_fastq_403.sh - to trigger fastq 4.03 execution (using `$PROJECT_ID-trigger/fastq_test/batch_config.json`)
+* ./run_cram_378.sh - to trigger 3.78 execution for cram sample (using `$PROJECT_ID-trigger/cram_test/378/batch_config.json`)
 
-### From shell
-Following command will drop START_PIPELINE file into the `gs://${PROJECT_ID}-input/[your_folder_path]` directory:
+## Cloud Functions
+There are three Cloud Functions: `run_dragen_job`, `get_status` and `job_scheduler`.
+
+`run_dragen_job` - Uses [Array Jobs](https://hpc-unibe-ch.github.io/slurm/array-jobs.html) and Batch API to 
+submit Batch Jobs with tasks to run Dragen Software based on the provided configuration and samples list.
+Is triggered when `START_PIPELINE` file is uploaded into the GCS `$PROJECT_ID-trigger` bucket and following logic is performed:
+* Checks for the `jobs.csv` file inside the trigger directory and triggers the first job in the list by uploading `START_PIEPLEINE` file inside the directory with the job configuration file.
+  * For example, in case the `jobs.csv` file looks like below:
+   ```shell
+    job1, gs://$PROJECT_ID-trigger/mytest/batch_config1.json
+    job2, gs://$PROJECT_ID-trigger/mytest/batch_config2.json
+    job3, gs://$PROJECT_ID-trigger/mytest/batch_config3.json
+  ```
+  * `START_PIPLEINE` to trigger first job will look like below and be uploaded into `gs://$PROJECT_ID-trigger/mytest`
+  * Copies `jobs.csv` into the `gs://$PROJECT_ID-trigger/scheduler/jobs.csv` directory.
+  * It is important to realize, that only One Schedule could be used at a time. It is also due to the hardware constrains and that there should be only one job (which might have multiple tasks) be running at a time.
 ```shell
-./start_pipeline.sh your_folder_path
+{
+  "dragen-job": "job1",
+  "config": "batch_config1.json"
+}
+```
+* If `jobs.csv` file was not detected, parses the content of the `START_PIPELINE` file: 
+  * In case if `START_PIPELINE` file is empty, for the configuration uses `batch_config.json` file name.
+  * Otherwise, tries to parse `START_PIPLEINE` as json and extracts `config` (as a name to be used instead of the default `batch_config.json`) and `dragen-job` (to be used a Job label) parameters.
+  * Looks for the `batch_config.json` or for the name as specified under `config` in `START_PIPELINE` inside the triggered directory.
+  * Calls batch API and passes information as specified in the detected configuration file. 
+  * Saves information about CREATED tasks into the BigQuery `$PROJECT_ID.dragen_illumina.tasks_status` table.
+  * generates `gs://$PROJECT_ID-output/jobs_created/<job_id>.csv` with all tasks information for further reference and usage by the `get_status` Cloud Function.
+
+<br>
+
+`get_status` - Streams information about Task State Changes into the BigQuery.
+* is subscribed to the `Topic: job-dragen-task-state-change-topic` and saves information about the task (plus combines with information from the `job_id.csv`) into the BigQuery.
+
+* Receives Pub/Sub notification about Batch Task State Change (with `JobUID`,`NewTaskState`, `TaskUID`) using `job-dragen-task-state-change-topic` topic.
+* Using JobUID/TaskUID tries to get additional task information from the `gs://$PROJECT_ID-output/jobs_created/<job_id>.csv` (Can also parse Log file generated by the task when csv file is not detected)   
+* Saves information about the task Status and task additional information for the reference inside the BigQuery `$PROJECT_ID.dragen_illumina.tasks_status` table.
+
+tries to get <job_id>.csv file and get additional information about task (which samples, input_path, output_path). 
+
+<br>
+
+`job_scheduler` - Schedules next Job using `jobs.csv` file when receives notification on the Successfully completion of the previous job in the list.
+* Receives Pub/Sub notification about batch Job State Change (with `JobUID`,`NewJobState`, `JobName`) using `job-dragen-job-state-change-topic` topic.
+* Using JobUID and job label checks for `gs://$PROJECT_ID-trigger/scheduler/jobs.csv` file to determine which job to be executed next.
+* Drops `START_PIPELINE` file into the directory containing batch configuration of the job.
+  * For example, if Pub/Sub contains information of the NewJobState='SUCCEEDED' and the label of the job is 'job1' based on the following `jobs.csv` file, next job to be triggered is job2: 
+   ```shell
+    job1, gs://$PROJECT_ID-trigger/mytest/batch_config1.json
+    job2, gs://$PROJECT_ID-trigger/mytest/batch_config2.json
+    job3, gs://$PROJECT_ID-trigger/mytest/batch_config3.json
+  ```
+  * `START_PIPLEINE` looking like below to be uploaded into the   `gs://$PROJECT_ID-trigger/mytest` directory
+
+  ```shell
+  {
+    "dragen-job": "job2",
+    "config": "batch_config2.json"
+  }
+  ```
+
+
+## Demo Flows
+
+###  Sample Dry Run
+
+To trigger the Job, run following command:
+```shell
+./run_cram_378_dry_run.sh
 ```
 
-> Note: Do not specify bucket name, since it always must be `gs://${PROJECT_ID}-input`
+Check if the Batch Job was scheduled successfully by navigating to [Batch Lists](https://console.cloud.google.com/batch/jobs).
+  - Job should appear as Scheduled and should have two tasks.
+  - After few minutes Job should get into Running status and then appear as Succeeded.
 
+Check the BigQuery Table by navigate to [BigQuery](https://console.cloud.google.com/bigquery) and opening up  `$PROJECT_ID.dragen_illumina.tasks_status` table => Preview.
+
+Following sample queries are available via scripts:
+
+- Summary of the samples with counts per status:
+  ```shell
+  sql-scripts/run_query.sh count
+  ```
+
+Output:
+```shell
++-------+---------+-----------+--------+
+| TOTAL | RUNNING | SUCCEEDED | FAILED |
++-------+---------+-----------+--------+
+|     2 |       0 |         2 |      0 |
++-------+---------+-----------+--------+
+```
+
+- Detailed summary of samples with the latest statuses:
+```shell
+sql-scripts/run_query.sh samples
+```
+
+Output:
+```shell
++-------------------------------------------------+-----------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
+|                     task_id                     | sample_id |  status   |       input_path       |                        output_path                   |      timestamp      |
++-------------------------------------------------+-----------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
+| job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-0 | NA0       | SUCCEEDED | s3://data/NA0/NA0.cram | s3://output/3_78/aggregation/NA0/2023-08-26-02-03-07 | 2023-08-26T02:05:31 |
+| job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-1 | NA1       | SUCCEEDED | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:05:32 |
++-------------------------------------------------+-----------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
+```
+
+- Detailed info per sample:
+```shell
+sql-scripts/run_query.sh sample NA1
+```
+
+Output:
+```shell
++----------------------------------------+-----------+-------------------------------------------------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
+|                 job_id                 | job_label |                     task_id                     |  status   |        input_path      |                         output_path                  |      timestamp      |
++----------------------------------------+-----------+-------------------------------------------------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
+| job-dragen-a2dfc32-6180da5b-5c9b-4a470 |           |                                                 | SCHEDULED | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:03:09 |
+| job-dragen-a2dfc32-6180da5b-5c9b-4a470 |           | job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-1 | RUNNING   | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:04:44 |
+| job-dragen-a2dfc32-6180da5b-5c9b-4a470 |           | job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-1 | SUCCEEDED | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:05:32 |
++----------------------------------------+-----------+-------------------------------------------------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
+```
+
+
+### 3.7.8 CRAM Smoke Test
+This job executes a Smoke Test using 3.7.8 Dragen software version on a CRAM sample.
+
+#### Check Configuration used for the Job
+Using GCP Cloud Console, go to the Cloud Storage `$PROJECT_ID-trigger` bucket and navigate to `cram/378` folder.
+This folder contains `batch_config.json` file, which specifies:
+- how to run the batch Job using `run_options`,
+- input type - `cram` | `fastq` | `fastq_list` (`input_type`)
+- input file to load for sample names and sample locations (`input_list`)
+- config file to load with Dragen software version and dragen parameters to pass (`config`)
+- 
+Manually inspect `batch_config.json` and `cram_config_378.json` and `NA12878_batch.txt` files.
+
+#### Trigger the Pipeline
+Run following commands in the Cloud Shell:
+
+
+
+This will drop an empty `START_PIPELINE` file into the `$PROJECT_ID-trigger/cram/378` folder.
+
+#### Check the Job been submitted
+* Using GCP Console go to [Batch](https://console.cloud.google.com/batch/jobs), you will see new `job-dragen-xxxx` in the Scheduled Status.
+* Select the newly created job in the `Job name` column.
+* In the task details check for the `Inline command` - these a re options passed to jarvice and dragen
+* Switch from the `Details` tab to `Events` tab of the Job.
+* Select `Logging` - this opens up Logging collected from the VM running Dragen software
+
+Alternative way to list job is to run following command in the Cloud Shell (substitute JOB_NAME accordingly):
+> This would not truncate the inline command as it is happening in the UI
+```shell
+gcloud batch jobs describe --location us-central1 JOB_NAME
+```
+
+#### Check Big Query Table for the Task Status
+Navigate to BigQuery using Cloud Console and check for the `$PROJECT_ID.dragen_illumina.tasks_status` table.
+
+Following events for the processing tasks are recorded along with the information about `sample_id`, `command`, `input_path`, `output_path`:
+- When task is initially created (Job Submitted)
+- When the task got into the 'RUNNING' state
+- When the task is completed (either `FAILED` or `SUCCEEDED` state)
+
+```shell
+sql-scripts/run_query.sh sample NA12878-SmokeTest
+```
+
+Sample Output:
+```shell
++----------------------------------------+-----------+-------------------------------------------------+-----------+---------------------------------------------------+----------------------------------------------------------------------------------+---------------------+
+|                 job_id                 | job_label |                     task_id                     |  status   |                input_path      |                                  output_path                       |      timestamp      |
++----------------------------------------+-----------+-------------------------------------------------+-----------+---------------------------------------------------+----------------------------------------------------------------------------------+---------------------+
+| job-dragen-910d240-26452221-7d34-47f30 |           |                                                 | SCHEDULED | s3://demo/NA12878/NA12878.cram | s3://output/3_78/aggregation/NA12878-SmokeTest/2023-08-25-19-52-41 | 2023-08-25T19:52:42 |
+| job-dragen-910d240-26452221-7d34-47f30 |           | job-dragen-910d240-26452221-7d34-47f30-group0-0 | RUNNING   | s3://demo/NA12878/NA12878.cram | s3://output/3_78/aggregation/NA12878-SmokeTest/2023-08-25-19-52-41 | 2023-08-25T19:55:21 |
++----------------------------------------+-----------+-------------------------------------------------+-----------+---------------------------------------------------+----------------------------------------------------------------------------------+---------------------+
+
+```
+#### Check Job completion
+This job will take ~ 1 hour to complete. 
+
+### Dry Run for 100 Tasks
+During the setup, a test file with 100 test samples has been generated and uploaded to `gs://$PROJECT_ID-trigger/cram/input_list/100_samples.txt`
+
+> To (re-)generate a samples list file for testing, you can run following command:
+>```shell
+>utils/create_input_list.sh -c <COUNT> -o <GCS_URI>
+>```
+> Example of 1000 samples:
+>
+>```shell
+>utils/create_input_list.sh -c 1000 -o gs://$PROJECT_ID-trigger/test/1000_samples.txt
+>```
+
+Now we want to prepare required configuration files and list of jobs to execute, so we would do with the real samples list. For that we need to: 
+1. Split input file into chunks based on the count of samples we want to run in a single batch job (that would run in parallel until completion)
+2. Select configuration we want to run it against (Dragen Software Version, Dragen options)
+3. Generate a list of jobs that would be handled by the scheduler.
+
+Following wrapper script will split 100 test samples into 5 Jobs, with 20 Tasks each and 10 tasks to be run in parallel.
+
+Run following command to get required configuration/setup files generated:
+```shell
+utils/prepare_input.sh
+```
+
+Output:
+
+```shell
+....
+Done! Generated: 
+ - Batch configurations inside gs://$PROJECT_ID-trigger/test/jobs
+ - Chunked samples lists inside gs://$PROJECT_ID-trigger/test/input_list
+ - Jobs list file gs://$PROJECT_ID-trigger/test/jobs.csv
+
+```
+
+> Alternatively, you can use utility  by  providing input parameters directly:
+> NB! Make sure **NOT to forget** to use _dryrun_ option (--dryrun) when not intending for the actual execution due to the costs involved.
+> ```shell
+> python utils/prepare_input/main.py -h
+> ```
+
+
+Trigger the pipeline: 
+```shell
+./run_test_jobs.sh
+```
+
+- The wrapper script above is dropping `START_PIPELINE` file into the `gs://$PROJECT_ID-trigger/test` directory.
+- `run_dragen_job` Cloud Function detects `jobs.csv` file in there and schedules processing of the jobs, by starting first job in the list and copying csv file into the `gs://$PROJECT_ID-trigger/scheduler/` directory. 
+
+Using GCP Console, go to the Batch list and wait for the first job to get Running (from the Queued to Scheduled to Running Status).
+
+Run following query to see data in the BigQuery:
+
+```shell
+sql-scripts/run_query.sh count
+```
+
+Sample Output:
+```shell
++-------+---------+-----------+--------+
+| TOTAL | RUNNING | SUCCEEDED | FAILED |
++-------+---------+-----------+--------+
+|   10  |      10 |       0   |      0 |
++-------+---------+-----------+--------+
+
+```
+
+It will take around 1 minute for first 10 tasks completed and next 10 tasks to be scheduled by the Batch.
+
+```shell
++-------+---------+-----------+--------+
+| TOTAL | RUNNING | SUCCEEDED | FAILED |
++-------+---------+-----------+--------+
+|    40 |       10 |       10 |     0 |
++-------+---------+-----------+--------+
+```
+
+When first Job with all 20 tasks is completed, Cloud Function `job_scheduler` will schedule the next job, and new Job will appear in the Batch Job List.
+
+
+To list overview of the sample per status:
+```shell
+sql-scripts/run_query.sh samples
+```
+
+```shell
++--------------------------------------------------+-----------+-----------+-----------------------------------------------+----------------------------------------------------------------------+---------------------+
+|                     task_id                      | sample_id |  status   |       input_path           |                             output_path                |      timestamp      |
++--------------------------------------------------+-----------+-----------+-----------------------------------------------+----------------------------------------------------------------------+---------------------+
+| job-dragen-7781e83-9806b982-eecc-4c880-group0-11 | NA11      | RUNNING   | s3://demo/NA11/NA11.cram   | s3://output/3_78/aggregation/NA11/2023-08-25-22-55-04  | 2023-08-25T22:57:55 |
+| job-dragen-7781e83-9806b982-eecc-4c880-group0-12 | NA12      | RUNNING   | s3://demo/NA12/NA12.cram   | s3://output/3_78/aggregation/NA12/2023-08-25-22-55-04 ~~~~ | 2023-08-25T22:57:56 |
+...
+| job-dragen-8ea240c-55762f35-c132-4de80-group0-4  | NA4       | SUCCEEDED | s3://demo/NA4/NA4.cram     | s3://output/3_78/aggregation/NA4/2023-08-25-22-06-45   | 2023-08-25T22:09:15 |
+| job-dragen-8ea240c-55762f35-c132-4de80-group0-5  | NA5       | SUCCEEDED | s3://demo/NA5/NA5.cram     | s3://output/3_78/aggregation/NA5/2023-08-25-22-06-45   | 2023-08-25T22:09:15 |
+```
+
+To see details about a sample:
+```shell
+sql-scripts/run_query.sh sample NA4
+```
+
+```shell
++----------------------------------------+-----------+-------------------------------------------------+-----------+-------------------------------------------+--------------------------------------------------------------------+---------------------+
+|                 job_id                 | job_label |                     task_id                     |  status   |    input_path          |                            output_path               |      timestamp      |
++----------------------------------------+-----------+-------------------------------------------------+-----------+-------------------------------------------+--------------------------------------------------------------------+---------------------+
+| job-dragen-c791f80-45080cd2-0aed-46f40 | job0      |                                                 | SCHEDULED | s3://demo/NA4/NA4.cram | s3://output/3_78/aggregation/NA4/2023-08-25-22-23-04 | 2023-08-25T22:23:05 |
+| job-dragen-c791f80-45080cd2-0aed-46f40 | job0      | job-dragen-c791f80-45080cd2-0aed-46f40-group0-4 | RUNNING   | s3://demo/NA4/NA4.cram | s3://output/3_78/aggregation/NA4/2023-08-25-22-23-04 | 2023-08-25T22:24:38 |
+| job-dragen-c791f80-45080cd2-0aed-46f40 | job0      | job-dragen-c791f80-45080cd2-0aed-46f40-group0-4 | SUCCEEDED | s3://demo/NA4/NA4.cram | s3://output/3_78/aggregation/NA4/2023-08-25-22-23-04 | 2023-08-25T22:25:27 |
++----------------------------------------+-----------+-------------------------------------------------+-----------+-------------------------------------------+--------------------------------------------------------------------+---------------------+
+
+```
 ## Troubleshooting
 
 ### Exhausting ssh login profile
@@ -201,6 +498,7 @@ Following dragen `VERSION`(s) are supported:
 ```shell
 gcloud batch jobs describe --location us-central1 $JOB_NAME 
 ```
+
 
 ## Sharing Code with the Customer
 

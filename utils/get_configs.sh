@@ -14,9 +14,10 @@
 # limitations under the License.
 
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
+printf="$WDIR/print"
 source "${WDIR}/../SET"
 
+$printf "Setting up Job Configuration files ..."
 function substitute(){
   INPUT_FILE="$1"
   echo "Substituting $INPUT_FILE"
@@ -29,7 +30,7 @@ function substitute(){
       s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
       s|__CONFIG_BUCKET__|'"$CONFIG_BUCKET_NAME"'|g;
       s|__DATA_BUCKET__|'"$DATA_BUCKET_NAME"'|g;
-      s|__JOBS_INFO__|'"$JOBS_INFO"'|g;
+      s|__JOBS_INFO_PATH__|'"$JOBS_INFO_PATH"'|g;
       ' "${INPUT_FILE}" > "${OUTPUT_FILE}"
 }
 
@@ -46,8 +47,9 @@ function copy_files(){
 }
 
 echo "Preparing config files"
-
-"${WDIR}"/create_input_samples_list.sh 10 "${WDIR}"/../config/cram/input_list/1000_samples.txt
+"${WDIR}/create_input_list.sh" -c 2 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/2_samples.txt
+"${WDIR}/create_input_list.sh" -c 100 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/100_samples.txt
+"${WDIR}/create_input_list.sh" -c 30 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/30_samples.txt
 
 # Substitute all .sample
 export -f substitute
@@ -60,4 +62,4 @@ find "${WDIR}/../config" -name "*.json" -type f ! -name '*sample.json' ! -name '
 export -f copy_files
 find "${WDIR}/../config" -type f ! -name '*.sample.*' \( -name '*.txt' -o -name 'batch_*.json' -o -name '*.csv' \) -exec bash -c 'copy_files "$0"' {} \;
 
-gsutil cp "${WDIR}/../data/status_header.csv" gs://"$OUTPUT_BUCKET_NAME/status/"
+

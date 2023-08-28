@@ -9,8 +9,5 @@
         "input_type": "cram",
         "input_list": "gs://__IN_BUCKET__/cram/input_list/NA12878_batch.txt",
         "config": "gs://__CONFIG_BUCKET__/cram_config_403.json"
-    },
-  "output_options": {
-    "jobs_created": "gs://__IN_BUCKET__/cram_test"
-  }
+    }
 }

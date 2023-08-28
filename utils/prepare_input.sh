@@ -14,29 +14,18 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/../SET
+source "$DIR/../SET"  > /dev/null 2>&1
 
-COUNT=$1
-OUTPUT=$2
-# collaborator_sample_id	cram_file_ref
-#NA12878-SmokeTest	s3://ek-broad-gp-dragen-demo/NA12878/NA12878.cram
+PARALLEL=10
+BATCH_SIZE=20
+INPUT="gs://$INPUT_BUCKET_NAME/cram/input_list/100_samples.txt"
 
-if [ -z "$OUTPUT" ]; then
-  OUTPUT="${DIR}/${COUNT}_samples.txt"
-fi
+#PARALLEL=5
+#BATCH_SIZE=10
+#INPUT="gs://$INPUT_BUCKET_NAME/cram/input_list/30_samples.txt"
+export DEBUG=true
 
-if [ -z "$COUNT" ]; then
-  COUNT=10
-fi
-
-echo "Generating $COUNT test samples into $OUTPUT file ..."
-
-echo "collaborator_sample_id	cram_file_ref" > ${OUTPUT}
-counter=0
-while [ $counter -lt $COUNT ]
-do
-  SAMPLE="NA${counter}"
-  PATH="s3://${DATA_BUCKET_NAME}/${SAMPLE}/${SAMPLE}.cram"
-  echo "${SAMPLE} ${PATH}" >> ${OUTPUT}
-  ((counter++))
-done
+#echo "-p $PARALLEL -b $BATCH_SIZE -c gs://$CONFIG_BUCKET_NAME/cram_config_378.json \
+#                      -o ${TEST_RUN_DIR} -s ${INPUT} --dryrun"
+python "${DIR}/prepare_input/main.py" -p $PARALLEL -b $BATCH_SIZE -c gs://$CONFIG_BUCKET_NAME/cram_config_378.json \
+                -o ${TEST_RUN_DIR} -s ${INPUT} --dryrun
