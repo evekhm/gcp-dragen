@@ -12,7 +12,7 @@
     * [Sample Dry Run](#sample-dry-run)
     * [3.7.8 CRAM Smoke Test](#378-cram-smoke-test)
     * [Dry Run for 100 Tasks](#dry-run-for-100-tasks)
-  * [Troubleshooting](#troubleshooting)~~~~
+  * [Troubleshooting](#troubleshooting)
   * [Supported versions](#supported-versions)
   * [References](#references)
   * [Loading batch Job details](#loading-batch-job-details)
