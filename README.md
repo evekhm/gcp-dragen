@@ -304,8 +304,9 @@ Manually inspect `batch_config.json` and `cram_config_378.json` and `NA12878_bat
 
 #### Trigger the Pipeline
 Run following commands in the Cloud Shell:
-
-
+```shell
+run_cram_378.sh
+```
 
 This will drop an empty `START_PIPELINE` file into the `$PROJECT_ID-trigger/cram/378` folder.
 
@@ -346,6 +347,12 @@ Sample Output:
 ```
 #### Check Job completion
 This job will take ~ 1 hour to complete. 
+Check the Job Log file, it should contain: 
+```shell
+DRAGEN complete. Exiting...
+```
+
+
 
 ### Dry Run for 100 Tasks
 During the setup, a test file with 100 test samples has been generated and uploaded to `gs://$PROJECT_ID-trigger/cram/input_list/100_samples.txt`
