@@ -20,3 +20,13 @@
 /data/hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1/anchored_rna/
 /data/hg38+alt_masked+cnv+graph+hla+rna-8-r2.0-1/anchored_hla/
 /deploy.log
+/cloud_functions/get_status/requirements.txt
+/cloud_functions/run_batch/requirements.txt
+/cloud_functions/scheduler/requirements.txt
+/config/cram/cram_config_378.json
+/config/cram/cram_config_403.json
+/config/cram/378/batch_config.json
+/config/cram/378-dryrun/batch_config.json
+/config/cram/403/batch_config.json
+/config/fastq/fastq_config_403.json
+/config/fastq/403/batch_config.json
