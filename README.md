@@ -1,13 +1,23 @@
-- [Introduction](#introduction)
-- [Create GCP Environment for DRAGEN](#create-gcp-environment-for-dragen)
-  * [Pre-requisites](#pre-requisites)
-  * [GCP Infrastructure](#gcp-infrastructure)
-- [Trigger the pipeline](#trigger-the-pipeline)
-  * [Directly from GCS](#directly-from-gcs)
-  * [From shell](#from-shell)
-- [Configuration](#configuration)
-- [References](#references)
 
+<!-- TOC -->
+  * [Introduction](#introduction)
+  * [Pre-requisites](#pre-requisites)
+    * [License Information](#license-information)
+    * [Infrastructure Preparation](#infrastructure-preparation)
+  * [GCP Setup](#gcp-setup)
+  * [Configuration](#configuration)
+  * [Trigger the pipeline](#trigger-the-pipeline)
+  * [Cloud Functions](#cloud-functions)
+  * [Demo Flows](#demo-flows)
+    * [Sample Dry Run](#sample-dry-run)
+    * [3.7.8 CRAM Smoke Test](#378-cram-smoke-test)
+    * [Dry Run for 100 Tasks](#dry-run-for-100-tasks)
+  * [Troubleshooting](#troubleshooting)~~~~
+  * [Supported versions](#supported-versions)
+  * [References](#references)
+  * [Loading batch Job details](#loading-batch-job-details)
+  * [Sharing Code with the Customer](#sharing-code-with-the-customer)
+<!-- TOC -->
 
 ## Introduction
 
