@@ -161,7 +161,9 @@ Sample scripts to trigger for execution (to be run from the Cloud Shell):
 * ./run_cram_378.sh - to trigger 3.78 execution for cram sample (using `$PROJECT_ID-trigger/cram_test/378/batch_config.json`)
 
 ## Cloud Functions
+
 There are three Cloud Functions: `run_dragen_job`, `get_status` and `job_scheduler`.
+### run_dragen_job
 
 `run_dragen_job` - Uses [Array Jobs](https://hpc-unibe-ch.github.io/slurm/array-jobs.html) and Batch API to 
 submit Batch Jobs with tasks to run Dragen Software based on the provided configuration and samples list.
@@ -190,9 +192,9 @@ Is triggered when `START_PIPELINE` file is uploaded into the GCS `$PROJECT_ID-tr
   * Saves information about CREATED tasks into the BigQuery `$PROJECT_ID.dragen_illumina.tasks_status` table.
   * generates `gs://$PROJECT_ID-output/jobs_created/<job_id>.csv` with all tasks information for further reference and usage by the `get_status` Cloud Function.
 
-<br>
+### get_status
 
-`get_status` - Streams information about Task State Changes into the BigQuery.
+`get_status` - Streams information about Task State Changes of the Job into the BigQuery.
 * is subscribed to the `Topic: job-dragen-task-state-change-topic` and saves information about the task (plus combines with information from the `job_id.csv`) into the BigQuery.
 
 * Receives Pub/Sub notification about Batch Task State Change (with `JobUID`,`NewTaskState`, `TaskUID`) using `job-dragen-task-state-change-topic` topic.
@@ -203,6 +205,7 @@ tries to get <job_id>.csv file and get additional information about task (which 
 
 <br>
 
+### job_scheduler~~~~
 `job_scheduler` - Schedules next Job using `jobs.csv` file when receives notification on the Successfully completion of the previous job in the list.
 * Receives Pub/Sub notification about batch Job State Change (with `JobUID`,`NewJobState`, `JobName`) using `job-dragen-job-state-change-topic` topic.
 * Using JobUID and job label checks for `gs://$PROJECT_ID-trigger/scheduler/jobs.csv` file to determine which job to be executed next.
