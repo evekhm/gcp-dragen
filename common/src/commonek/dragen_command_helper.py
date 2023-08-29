@@ -24,7 +24,9 @@ class DragenCommand:
     def __obscure_sensitive_info(self):
         def obscure_key(key_name, command):
             key_value = get_parameter_value(command, key_name)
-            return command.replace(key_value, ('X' * len(key_value)))
+            if key_value:
+                return command.replace(key_value, ('X' * len(key_value)))
+            return command
 
         license_string = get_parameter_value(self.script, "--lic-server")
         match = re.match(r"https://(.+)@license.edicogenome.com", license_string)

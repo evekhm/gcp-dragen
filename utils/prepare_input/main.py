@@ -51,10 +51,10 @@ def doit(batch_size: int,
     for i in range(0, len(input_list), batch_size):
         x = i
         chunk_list = input_list[x:x + batch_size]
-        batch_config_file = f"{batch_config_dir}/batch_config{x}.json"
+        batch_config_file = f"{batch_config_dir}/batch_config{index}.json"
         input_path_file = f"{input_list_dir}/{input_name}_{x}.txt"
 
-        jobs_list += f"job{index}, gs://{bucket_name}/{batch_config_file}\n"
+        jobs_list += f"job{index}, s3://{bucket_name}/{batch_config_file}\n"
 
         samples = ""
         for row in chunk_list:

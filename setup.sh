@@ -254,8 +254,9 @@ function setup_job_service_account(){
   add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/batch.agentReporter" # For Batch Job
   add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/secretmanager.viewer" # To access Secret
   add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/secretmanager.secretAccessor" # To access Secret
-  add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/artifactregistry.reader" # To access Secret
-  add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "oles/artifactregistry.writer" # To access Secret
+  add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/artifactregistry.reader" # To access AR
+  add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/artifactregistry.writer" # To write Python Package to AR
+  add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/logging.admin" # To Get Logging Analysis (Could be better scoped)
   add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/storage.admin"  # Otherwise getting 403 GET ERROR for config.json
   add_role_binding_to_service_account "${JOB_SERVICE_ACCOUNT}" "roles/bigquery.dataEditor"  # For BigQuery access (Could be narrowed down to the dataset)
 

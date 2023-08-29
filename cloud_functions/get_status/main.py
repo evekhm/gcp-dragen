@@ -23,7 +23,8 @@ from commonek.logging import Logger
 from commonek.helper import split_uri_2_bucket_prefix
 from commonek.batch_helper import get_job_by_uid
 from commonek.bq_helper import stream_tasks_to_bigquery
-from commonek.params import PROJECT_ID, JOBS_INFO_PATH, SAMPLE_ID, INPUT_PATH, OUTPUT_PATH, JOB_LABEL_NAME, INPUT_TYPE, COMMAND
+from commonek.params import PROJECT_ID, JOBS_INFO_PATH, SAMPLE_ID, INPUT_PATH, OUTPUT_PATH, JOB_LABEL_NAME, INPUT_TYPE, \
+    COMMAND
 from io import StringIO
 import csv
 import re
@@ -31,6 +32,10 @@ from commonek.dragen_command_helper import DragenCommand
 
 # API clients
 storage_client = storage.Client()
+client = LoggingServiceV2Client()
+
+DRAGEN_COMMAND_ENTRY = "Command Line:"  # Log Entry from Dragen Software
+DRAGEN_SUCCESS_ENTRY = "DRAGEN complete\. Exiting"
 
 
 def get_task_info_from_csv(job_uid: str, task_id: str):
@@ -102,32 +107,45 @@ def get_task_info_from_csv(job_uid: str, task_id: str):
     return sample_id, input_path, output_path, input_type, command
 
 
-def get_task_info_from_log(job_uid: str, task_id: str):
-    Logger.info(f"get_task_info_from_log with job_uid={job_uid}, task_id={task_id}")
-    client = LoggingServiceV2Client()
+def get_log_entries(job_uid: str, task_id: str, payload_pattern: str):
+    Logger.info(f"get_log_entry with job_uid={job_uid}, task_id={task_id}, payload={payload_pattern}")
 
     resource_names = [f"projects/{PROJECT_ID}"]
     filters = (
         f"logName=projects/{PROJECT_ID}/logs/batch_task_logs "
-        f""" AND resource.labels.task_id=task/{task_id}/0/0 AND resource.labels.job={job_uid}"""
+        f""" AND resource.labels.task_id=task/{task_id}/0/0 AND resource.labels.job={job_uid} AND
+         textPayload=~\"{payload_pattern}\""""
     )
-    Logger.info(f"filters={filters}")
+    Logger.info(f"get_log_entry filters={filters}")
     iterator = client.list_log_entries(
         {"resource_names": resource_names, "filter": filters}
     )
 
+    payload = [entry.text_payload for entry in iterator]
+    return payload
+
+
+def verify_dragen_success_using_log(job_uid: str, task_id: str):
+    log_entries = get_log_entries(job_uid, task_id, DRAGEN_SUCCESS_ENTRY)
+    if log_entries and len(log_entries) > 0:
+        return True
+    return False
+
+
+def get_task_info_from_log(job_uid: str, task_id: str):
     sample_id, input_path, output_path, command, input_type = None, None, None, None, None
 
-    for entry in iterator:
-        if entry.text_payload.startswith("Command Line:"):
-            command = entry.text_payload[len("Command Line:"):].strip()
-            dragen_command = DragenCommand(command)
-            Logger.info(f"get_task_info_from_log - FOUND: {dragen_command}")
-            input_path = dragen_command.get_input()
-            output_path = dragen_command.get_output()
-            sample_id = dragen_command.get_sample_id()
-            input_type = dragen_command.get_input_type()
-            break
+    log_entries = get_log_entries(job_uid, task_id, DRAGEN_COMMAND_ENTRY)
+    if log_entries and len(log_entries) > 0:
+        # taking last log Entry
+        last_entry = log_entries[-1]
+        command = last_entry[len(DRAGEN_COMMAND_ENTRY):].strip()
+        dragen_command = DragenCommand(command)
+        Logger.info(f"get_task_info_from_log - FOUND: {dragen_command}")
+        input_path = dragen_command.get_input()
+        output_path = dragen_command.get_output()
+        sample_id = dragen_command.get_sample_id()
+        input_type = dragen_command.get_input_type()
 
     return sample_id, input_path, output_path, input_type, command
 
@@ -185,8 +203,11 @@ def get_status(event, context):
                      f"for case_id {job_uid} and uid {task_id}: {error}")
 
 
-if __name__ == "__main__":
+def verify_task():
+    pass
 
+
+if __name__ == "__main__":
     # Using Logger (cram)
     # get_status({
     #                 'attributes': {
@@ -197,17 +218,20 @@ if __name__ == "__main__":
     #             }, None)
 
     # Using csv (cram)
+    # get_task_info_from_log("job-dragen-73a1ea4-a2c792ba-50a8-43190",
+    #                        "job-dragen-73a1ea4-a2c792ba-50a8-43190-group0-0")
+
+    verify_dragen_success_using_log(job_uid="job-dragen-73a1ea4-a2c792ba-50a8-43190",
+                  task_id="job-dragen-73a1ea4-a2c792ba-50a8-43190-group0-0")
+
     get_status({
         'attributes': {
             "JobUID": "job-dragen-e5d2b22-3fc853f9-2e9b-4f080", "NewTaskState": "SUCCEEDED", 'Region': 'us-central1',
             "TaskUID": "job-dragen-e5d2b22-3fc853f9-2e9b-4f080-group0-6"
         },
-        'data':  'VGFzayBzdGF0ZSB3YXMgdXBkYXRlZDogdGFza1VJRD1qb2ItZHJhZ2VuLWU1ZDJiMjItM2ZjODUzZjktMmU5Yi00ZjA4MC1ncm91cDAtNiwgcHJldmlvdXNTdGF0ZT1QRU5ESU5HLCBjdXJyZW50U3RhdGU9U1VDQ0VFREVELCB0aW1lc3RhbXA9MjAyMy0wOC0yNFQxNjoyMTowMy0wNzowMA=='
+        'data': 'VGFzayBzdGF0ZSB3YXMgdXBkYXRlZDogdGFza1VJRD1qb2ItZHJhZ2VuLWU1ZDJiMjItM2ZjODUzZjktMmU5Yi00ZjA4MC1ncm91cDAtNiwgcHJldmlvdXNTdGF0ZT1QRU5ESU5HLCBjdXJyZW50U3RhdGU9U1VDQ0VFREVELCB0aW1lc3RhbXA9MjAyMy0wOC0yNFQxNjoyMTowMy0wNzowMA=='
     }, None)
 
     # Using Logger (fastq)
 
     # Using csv (fastq)
-
-
-
