@@ -22,6 +22,21 @@ def split_uri_2_bucket_prefix(uri: str):
     if not match:
         # just bucket no prefix
         match = re.match(r"gs://([^/]+)", uri)
+        if not match:
+            return split_uri_2_bucket_s3(uri)
+        return match.group(1), ""
+    bucket = match.group(1)
+    prefix = match.group(2)
+    return bucket, prefix
+
+
+def split_uri_2_bucket_s3(uri: str):
+    match = re.match(r"s3://([^/]+)/(.+)", uri)
+    if not match:
+        # just bucket no prefix
+        match = re.match(r"s3://([^/]+)", uri)
+        if not match:
+            return "", ""
         return match.group(1), ""
     bucket = match.group(1)
     prefix = match.group(2)
