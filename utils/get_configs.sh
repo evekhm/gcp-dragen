@@ -47,9 +47,13 @@ function copy_files(){
 }
 
 echo "Preparing config files"
-"${WDIR}/create_input_list.sh" -c 2 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/2_samples.txt
+"${WDIR}/create_input_list.sh" -c 20 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/20_samples.txt
+"${WDIR}/create_input_list.sh" -c 1 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/sample.txt
+"${WDIR}/create_input_list.sh" -s 20 -c 22 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/20_21_samples.txt
+"${WDIR}/create_input_list.sh" -s 22 -c 23 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/22_samples.txt
 "${WDIR}/create_input_list.sh" -c 100 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/100_samples.txt
-"${WDIR}/create_input_list.sh" -c 30 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/30_samples.txt
+
+"${WDIR}"/prepare_input.sh
 
 # Substitute all .sample
 export -f substitute

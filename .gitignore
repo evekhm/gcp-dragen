@@ -30,3 +30,5 @@
 /config/cram/403/batch_config.json
 /config/fastq/fastq_config_403.json
 /config/fastq/403/batch_config.json
+/config/cram/dryrun_config_fail.json
+/config/cram/dryrun_config_pass.json

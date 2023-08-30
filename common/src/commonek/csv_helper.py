@@ -23,6 +23,7 @@ from google.cloud import storage
 
 from commonek.helper import split_uri_2_bucket_prefix
 from commonek.logging import Logger
+from commonek.gcs_helper import file_exists
 from commonek.params import TRIGGER_FILE_NAME, JOB_LABEL_NAME
 
 # API clients
@@ -34,6 +35,11 @@ gcs = storage.Client()  # cloud storage
 def trigger_job_from_csv(bucket_name: str, file_path: str, previous_job_label: str = None):
     Logger.info(f"trigger_job_from_csv - using gs://{bucket_name}/{file_path} scheduling file, "
                 f"finding job listed after {previous_job_label} (or first if None)")
+
+    if not file_exists(bucket_name, file_path):
+        Logger.info(f"trigger_job_from_csv - Exiting since file gs://{bucket_name}/{file_path} i was not found.")
+        return
+
     bucket = gcs.get_bucket(bucket_name)
     jobs_list_blob = bucket.blob(file_path)
     csv_string = jobs_list_blob.download_as_text()
@@ -69,3 +75,5 @@ def trigger_job_from_csv(bucket_name: str, file_path: str, previous_job_label: s
 
         if job_label_name == previous_job_label:
             next_row = True
+
+    Logger.info(f"No job found to trigger comming after the completed one {previous_job_label}")

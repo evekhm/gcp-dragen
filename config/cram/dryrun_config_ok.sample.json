@@ -1,9 +1,9 @@
 {
     "dragen_options": {
         "--force": "",
-        "-r": "s3://__DATA_BUCKET__/References/hg38_hash_3.7.8",
+        "-r": "s3://__DATA_BUCKET__/References/hg38+alt_masked+cnv+graph+hla+rna-8-r2_0-1",
         "--output-directory": "s3://__OUT_BUCKET__/3_78/aggregation/${SAMPLE_ID}/<date>",
-        "--intermediate-results-dir": "/tmp",
+        "--intermediate-results-dir": "/local/scratch",
         "--output-file-prefix": "${SAMPLE_ID}",
         "--vc-sample-name": "${SAMPLE_ID}",
         "--enable-map-align": "true",
@@ -23,16 +23,18 @@
         "--qc-coverage-reports-2": "cov_report ",
         "--qc-coverage-region-3": "s3://__DATA_BUCKET__/References/PGx_singleSite_GRCh38_09nov2020.bed ",
         "--qc-coverage-reports-3": "cov_report ",
-        "--vc-hard-filter": "\"'DRAGENHardQUAL:all:QUAL\\<5.0\\;LowDepth:all:DP\\<=1'\"",
         "--qc-coverage-ignore-overlaps": "true",
         "--qc-coverage-count-soft-clipped-bases": "true",
         "--read-trimmers": "polyg",
         "--soft-read-trimmers": "none"
     },
     "jarvice_options": {
-        "entrypoint": "/bin/bash",
-        "stub": "jarvice-dragen-stub.sh",
+        "entrypoint": "/bin/sh",
+        "stub": "sleep 30 && echo DRAGEN complete. Exiting && echo Command Line: ",
         "jxe_app": "illumina-dragen_3_7_8n",
-        "image_uri": "__IMAGE__"
+        "image_uri": "gcr.io/google-containers/busybox"
     }
 }
+
+
+

@@ -1,4 +1,4 @@
 {
-    "dragen-job": "job1",
-    "config": "batch_config1.json"
+    "dragen-job": "batch_config_ok",
+    "config": "batch_config_ok.json"
 }

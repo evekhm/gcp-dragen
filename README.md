@@ -8,11 +8,18 @@
   * [Configuration](#configuration)
   * [Trigger the pipeline](#trigger-the-pipeline)
   * [Cloud Functions](#cloud-functions)
+    * [run_dragen_job](#rundragenjob)
+    * [get_status](#getstatus)
+    * [job_scheduler](#jobscheduler)
   * [Demo Flows](#demo-flows)
-    * [Sample Dry Run](#sample-dry-run)
+    * [Sample Dry Run Single task](#sample-dry-run-single-task)
     * [3.7.8 CRAM Smoke Test](#378-cram-smoke-test)
+    * [Dry Run for A list of Jobs](#dry-run-for-a-list-of-jobs)
     * [Dry Run for 100 Tasks](#dry-run-for-100-tasks)
   * [Troubleshooting](#troubleshooting)
+    * [Exhausting ssh login profile](#exhausting-ssh-login-profile)
+      * [Error](#error)
+      * [Resolution](#resolution)
   * [Supported versions](#supported-versions)
   * [References](#references)
   * [Loading batch Job details](#loading-batch-job-details)
@@ -159,6 +166,9 @@ Sample scripts to trigger for execution (to be run from the Cloud Shell):
 * ./run_cram_403.sh - to trigger 4.03 execution of cram jobs (using `$PROJECT_ID-trigger/cram_test/403/batch_config.json`)
 * ./run_fastq_403.sh - to trigger fastq 4.03 execution (using `$PROJECT_ID-trigger/fastq_test/batch_config.json`)
 * ./run_cram_378.sh - to trigger 3.78 execution for cram sample (using `$PROJECT_ID-trigger/cram_test/378/batch_config.json`)
+* ./run_test_batch.sh - to trigger 3.78 dry run sample test (okay 20 samples)
+* ./run_test_batch.sh fail - to trigger 3.78 dry run sample test (fail 2 samples)
+* ./run_test_batch.sh pass - to trigger 3.78 dry run sample test (pass 2 samples, verified_fail)
 
 ## Cloud Functions
 
@@ -205,8 +215,8 @@ tries to get <job_id>.csv file and get additional information about task (which 
 
 <br>
 
-### job_scheduler~~~~
-`job_scheduler` - Schedules next Job using `jobs.csv` file when receives notification on the Successfully completion of the previous job in the list.
+### job_scheduler
+`job_scheduler` - Schedules next Job using `jobs.csv` file when receives notification on the completion of the previous job in the list (Succeeded or Failed state).
 * Receives Pub/Sub notification about batch Job State Change (with `JobUID`,`NewJobState`, `JobName`) using `job-dragen-job-state-change-topic` topic.
 * Using JobUID and job label checks for `gs://$PROJECT_ID-trigger/scheduler/jobs.csv` file to determine which job to be executed next.
 * Drops `START_PIPELINE` file into the directory containing batch configuration of the job.
@@ -228,11 +238,11 @@ tries to get <job_id>.csv file and get additional information about task (which 
 
 ## Demo Flows
 
-###  Sample Dry Run
+###  Sample Dry Run Single task
 
-To trigger the Job, run following command:
+To trigger the Job with one task (sample), run the following command:
 ```shell
-./run_cram_378_dry_run.sh
+./run_test_batch.sh
 ```
 
 Check if the Batch Job was scheduled successfully by navigating to [Batch Lists](https://console.cloud.google.com/batch/jobs).
@@ -240,53 +250,6 @@ Check if the Batch Job was scheduled successfully by navigating to [Batch Lists]
   - After few minutes Job should get into Running status and then appear as Succeeded.
 
 Check the BigQuery Table by navigate to [BigQuery](https://console.cloud.google.com/bigquery) and opening up  `$PROJECT_ID.dragen_illumina.tasks_status` table => Preview.
-
-Following sample queries are available via scripts:
-
-- Summary of the samples with counts per status:
-  ```shell
-  sql-scripts/run_query.sh count
-  ```
-
-Output:
-```shell
-+-------+---------+-----------+--------+
-| TOTAL | RUNNING | SUCCEEDED | FAILED |
-+-------+---------+-----------+--------+
-|     2 |       0 |         2 |      0 |
-+-------+---------+-----------+--------+
-```
-
-- Detailed summary of samples with the latest statuses:
-```shell
-sql-scripts/run_query.sh samples
-```
-
-Output:
-```shell
-+-------------------------------------------------+-----------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
-|                     task_id                     | sample_id |  status   |       input_path       |                        output_path                   |      timestamp      |
-+-------------------------------------------------+-----------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
-| job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-0 | NA0       | SUCCEEDED | s3://data/NA0/NA0.cram | s3://output/3_78/aggregation/NA0/2023-08-26-02-03-07 | 2023-08-26T02:05:31 |
-| job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-1 | NA1       | SUCCEEDED | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:05:32 |
-+-------------------------------------------------+-----------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
-```
-
-- Detailed info per sample:
-```shell
-sql-scripts/run_query.sh sample NA1
-```
-
-Output:
-```shell
-+----------------------------------------+-----------+-------------------------------------------------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
-|                 job_id                 | job_label |                     task_id                     |  status   |        input_path      |                         output_path                  |      timestamp      |
-+----------------------------------------+-----------+-------------------------------------------------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
-| job-dragen-a2dfc32-6180da5b-5c9b-4a470 |           |                                                 | SCHEDULED | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:03:09 |
-| job-dragen-a2dfc32-6180da5b-5c9b-4a470 |           | job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-1 | RUNNING   | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:04:44 |
-| job-dragen-a2dfc32-6180da5b-5c9b-4a470 |           | job-dragen-a2dfc32-6180da5b-5c9b-4a470-group0-1 | SUCCEEDED | s3://data/NA1/NA1.cram | s3://output/3_78/aggregation/NA1/2023-08-26-02-03-07 | 2023-08-26T02:05:32 |
-+----------------------------------------+-----------+-------------------------------------------------+-----------+----------------------------------------+----------------------------------------------------------------------+---------------------+
-```
 
 
 ### 3.7.8 CRAM Smoke Test
@@ -305,7 +268,7 @@ Manually inspect `batch_config.json` and `cram_config_378.json` and `NA12878_bat
 #### Trigger the Pipeline
 Run following commands in the Cloud Shell:
 ```shell
-run_cram_378.sh
+./run_cram_378.sh
 ```
 
 This will drop an empty `START_PIPELINE` file into the `$PROJECT_ID-trigger/cram/378` folder.
@@ -352,9 +315,92 @@ Check the Job Log file, it should contain:
 DRAGEN complete. Exiting...
 ```
 
+### Dry Run for A list of Jobs
 
+During the setup, a test list of Jobs been created and uploaded to: `gs://$PROJECT_ID-trigger/test/jobs.csv`
+This list contains of three jobs:
+* Job for 20 samples (Verified OK) - dry run, task will output  Dragen Command, sleep for 30 seconds and output “DRAGEN complete. Exitting…”
+* Pass Job for 2 samples (Verified Fail) ( Log file does not contain Dragen Completion entry)
+* Fail Job for 1 samples (FAIL)  (task will exit with code 1)
 
-### Dry Run for 100 Tasks
+Trigger execution of the jobs:
+
+```shell
+> ./run_test_jobs.sh
+```
+
+Check [Cloud Console Batch](https://console.cloud.google.com/batch/jobs) for the Progress
+
+Do the sample quires:
+
+Summary of the samples with counts per status:
+```shell
+sql-scripts/run_query.sh count
+```
+
+VERIFIED_OK - means the Log File was analyzed and magic "DRAGEN complete" statement was found in there.
+VERIFIED_FAILED - Log Entry with "DRAGEN complete~~~~" entry was not detected.
+
+```shell
++-------+---------+-----------+--------+-------------+-----------------+
+| TOTAL | RUNNING | SUCCEEDED | FAILED | VERIFIED_OK | VERIFIED_FAILED |
++-------+---------+-----------+--------+-------------+-----------------+
+|    23 |       0 |        22 |      1 |          20 |               2 |
++-------+---------+-----------+--------+-------------+-----------------+
+```
+
+- Detailed summary of samples with the latest statuses:
+```shell
+sql-scripts/run_query.sh samples
+```
+
+```shell
++--------------------------------------------------+-----------+-----------------+---------------------------------------------+-------------------------------------------------------------------+---------------------+
+|                     task_id                      | sample_id |     status      |     input_path          |                            output_path                  |      timestamp      |
++--------------------------------------------------+-----------+-----------------+---------------------------------------------+-------------------------------------------------------------------+---------------------+
+| job-dragen-7484400-c25f3bc9-23af-408b0-group0-0  | NA22      | FAILED          | s3://demo/NA22/NA22.cram | s3://output/3_7_8/aggregation/NA22/2023-08-30-22-36-35 | 2023-08-30T22:39:03 |
+| job-dragen-c832b0b-e07b9ba6-a038-48190-group0-0  | NA20      | VERIFIED_FAILED | s3://demo/NA20/NA20.cram | s3://output/3_7_8/aggregation/NA20/2023-08-30-22-34-58 | 2023-08-30T22:36:30 |
+| job-dragen-c832b0b-e07b9ba6-a038-48190-group0-1  | NA21      | VERIFIED_FAILED | s3://demo/NA21/NA21.cram | s3://output/3_7_8/aggregation/NA21/2023-08-30-22-34-58 | 2023-08-30T22:36:31 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-3  | NA3       | VERIFIED_OK     | s3://demo/NA3/NA3.cram   | s3://output/3_7_8/aggregation/NA3/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-6  | NA6       | VERIFIED_OK     | s3://demo/NA6/NA6.cram   | s3://output/3_7_8/aggregation/NA6/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-2  | NA2       | VERIFIED_OK     | s3://demo/NA2/NA2.cram   | s3://output/3_7_8/aggregation/NA2/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-9  | NA9       | VERIFIED_OK     | s3://demo/NA9/NA9.cram   | s3://output/3_7_8/aggregation/NA9/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-8  | NA8       | VERIFIED_OK     | s3://demo/NA8/NA8.cram   | s3://output/3_7_8/aggregation/NA8/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-11 | NA11      | VERIFIED_OK     | s3://demo/NA11/NA11.cram | s3://output/3_7_8/aggregation/NA11/2023-08-30-22-31-56 | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-7  | NA7       | VERIFIED_OK     | s3://demo/NA7/NA7.cram   | s3://output/3_7_8/aggregation/NA7/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-1  | NA1       | VERIFIED_OK     | s3://demo/NA1/NA1.cram   | s3://output/3_7_8/aggregation/NA1/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-10 | NA10      | VERIFIED_OK     | s3://demo/NA10/NA10.cram | s3://output/3_7_8/aggregation/NA10/2023-08-30-22-31-56 | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-5  | NA5       | VERIFIED_OK     | s3://demo/NA5/NA5.cram   | s3://output/3_7_8/aggregation/NA5/2023-08-30-22-31-56  | 2023-08-30T22:34:03 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-19 | NA19      | VERIFIED_OK     | s3://demo/NA19/NA19.cram | s3://output/3_7_8/aggregation/NA19/2023-08-30-22-31-56 | 2023-08-30T22:34:49 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-16 | NA16      | VERIFIED_OK     | s3://demo/NA16/NA16.cram | s3://output/3_7_8/aggregation/NA16/2023-08-30-22-31-56 | 2023-08-30T22:34:49 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-4  | NA4       | VERIFIED_OK     | s3://demo/NA4/NA4.cram   | s3://output/3_7_8/aggregation/NA4/2023-08-30-22-31-56  | 2023-08-30T22:34:49 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-18 | NA18      | VERIFIED_OK     | s3://demo/NA18/NA18.cram | s3://output/3_7_8/aggregation/NA18/2023-08-30-22-31-56 | 2023-08-30T22:34:49 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-15 | NA15      | VERIFIED_OK     | s3://demo/NA15/NA15.cram | s3://output/3_7_8/aggregation/NA15/2023-08-30-22-31-56 | 2023-08-30T22:34:49 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-14 | NA14      | VERIFIED_OK     | s3://demo/NA14/NA14.cram | s3://output/3_7_8/aggregation/NA14/2023-08-30-22-31-56 | 2023-08-30T22:34:49 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-13 | NA13      | VERIFIED_OK     | s3://demo/NA13/NA13.cram | s3://output/3_7_8/aggregation/NA13/2023-08-30-22-31-56 | 2023-08-30T22:34:50 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-12 | NA12      | VERIFIED_OK     | s3://demo/NA12/NA12.cram | s3://output/3_7_8/aggregation/NA12/2023-08-30-22-31-56 | 2023-08-30T22:34:50 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-0  | NA0       | VERIFIED_OK     | s3://demo/NA0/NA0.cram   | s3://output/3_7_8/aggregation/NA0/2023-08-30-22-31-56  | 2023-08-30T22:34:50 |
+| job-dragen-461625f-9040151d-96d3-4c7f0-group0-17 | NA17      | VERIFIED_OK     | s3://demo/NA17/NA17.cram | s3://output/3_7_8/aggregation/NA17/2023-08-30-22-31-56 | 2023-08-30T22:34:53 |
++--------------------------------------------------+-----------+-----------------+---------------------------------------------+-------------------------------------------------------------------+---------------------+
+
+```
+
+- Detailed info per sample:
+```shell
+sql-scripts/run_query.sh sample NA3
+```
+
+```shell
++----------------------------------------+-----------+-------------------------------------------------+-------------+-------------------------------------------+------------------------------------------------------------------+---------------------+
+|                 job_id                 | job_label |                     task_id                     |   status    |       input_path       |                           output_path                 |      timestamp      |
++----------------------------------------+-----------+-------------------------------------------------+-------------+-------------------------------------------+------------------------------------------------------------------+---------------------+
+| job-dragen-461625f-9040151d-96d3-4c7f0 | job0      |                                                 | SCHEDULED   | s3://demo/NA3/NA3.cram | s3://output/3_7_8/aggregation/NA3/2023-08-30-22-31-56 | 2023-08-30T22:31:58 |
+| job-dragen-461625f-9040151d-96d3-4c7f0 | job0      | job-dragen-461625f-9040151d-96d3-4c7f0-group0-3 | RUNNING     | s3://demo/NA3/NA3.cram | s3://output/3_7_8/aggregation/NA3/2023-08-30-22-31-56 | 2023-08-30T22:33:37 |
+| job-dragen-461625f-9040151d-96d3-4c7f0 | job0      | job-dragen-461625f-9040151d-96d3-4c7f0-group0-3 | SUCCEEDED   | s3://demo/NA3/NA3.cram | s3://output/3_7_8/aggregation/NA3/2023-08-30-22-31-56 | 2023-08-30T22:33:54 |
+| job-dragen-461625f-9040151d-96d3-4c7f0 | job0      | job-dragen-461625f-9040151d-96d3-4c7f0-group0-3 | VERIFIED_OK | s3://demo/NA3/NA3.cram | s3://output/3_7_8/aggregation/NA3/2023-08-30-22-31-56 | 2023-08-30T22:34:03 |
++----------------------------------------+-----------+-------------------------------------------------+-------------+-------------------------------------------+------------------------------------------------------------------+---------------------+
+```
+### Dry Run for 100 Tasks -> Chunk into Jobs
 During the setup, a test file with 100 test samples has been generated and uploaded to `gs://$PROJECT_ID-trigger/cram/input_list/100_samples.txt`
 
 > To (re-)generate a samples list file for testing, you can run following command:
@@ -391,7 +437,6 @@ Done! Generated:
 ```
 
 > Alternatively, you can use utility  by  providing input parameters directly:
-> NB! Make sure **NOT to forget** to use _dryrun_ option (--dryrun) when not intending for the actual execution due to the costs involved.
 > ```shell
 > python utils/prepare_input/main.py -h
 > ```
@@ -407,64 +452,7 @@ Trigger the pipeline:
 
 Using GCP Console, go to the Batch list and wait for the first job to get Running (from the Queued to Scheduled to Running Status).
 
-Run following query to see data in the BigQuery:
-
-```shell
-sql-scripts/run_query.sh count
-```
-
-Sample Output:
-```shell
-+-------+---------+-----------+--------+
-| TOTAL | RUNNING | SUCCEEDED | FAILED |
-+-------+---------+-----------+--------+
-|   10  |      10 |       0   |      0 |
-+-------+---------+-----------+--------+
-
-```
-
-It will take around 1 minute for first 10 tasks completed and next 10 tasks to be scheduled by the Batch.
-
-```shell
-+-------+---------+-----------+--------+
-| TOTAL | RUNNING | SUCCEEDED | FAILED |
-+-------+---------+-----------+--------+
-|    40 |       10 |       10 |     0 |
-+-------+---------+-----------+--------+
-```
-
-When first Job with all 20 tasks is completed, Cloud Function `job_scheduler` will schedule the next job, and new Job will appear in the Batch Job List.
-
-
-To list overview of the sample per status:
-```shell
-sql-scripts/run_query.sh samples
-```
-
-```shell
-+--------------------------------------------------+-----------+-----------+-----------------------------------------------+----------------------------------------------------------------------+---------------------+
-|                     task_id                      | sample_id |  status   |       input_path           |                             output_path                |      timestamp      |
-+--------------------------------------------------+-----------+-----------+-----------------------------------------------+----------------------------------------------------------------------+---------------------+
-| job-dragen-7781e83-9806b982-eecc-4c880-group0-11 | NA11      | RUNNING   | s3://demo/NA11/NA11.cram   | s3://output/3_78/aggregation/NA11/2023-08-25-22-55-04  | 2023-08-25T22:57:55 |
-| job-dragen-7781e83-9806b982-eecc-4c880-group0-12 | NA12      | RUNNING   | s3://demo/NA12/NA12.cram   | s3://output/3_78/aggregation/NA12/2023-08-25-22-55-04 ~~~~ | 2023-08-25T22:57:56 |
-...
-| job-dragen-8ea240c-55762f35-c132-4de80-group0-4  | NA4       | SUCCEEDED | s3://demo/NA4/NA4.cram     | s3://output/3_78/aggregation/NA4/2023-08-25-22-06-45   | 2023-08-25T22:09:15 |
-| job-dragen-8ea240c-55762f35-c132-4de80-group0-5  | NA5       | SUCCEEDED | s3://demo/NA5/NA5.cram     | s3://output/3_78/aggregation/NA5/2023-08-25-22-06-45   | 2023-08-25T22:09:15 |
-```
-
-To see details about a sample:
-```shell
-sql-scripts/run_query.sh sample NA4
-```
-
-```shell
-+----------------------------------------+-----------+-------------------------------------------------+-----------+-------------------------------------------+--------------------------------------------------------------------+---------------------+
-|                 job_id                 | job_label |                     task_id                     |  status   |    input_path          |                            output_path               |      timestamp      |
-+----------------------------------------+-----------+-------------------------------------------------+-----------+-------------------------------------------+--------------------------------------------------------------------+---------------------+
-| job-dragen-c791f80-45080cd2-0aed-46f40 | job0      |                                                 | SCHEDULED | s3://demo/NA4/NA4.cram | s3://output/3_78/aggregation/NA4/2023-08-25-22-23-04 | 2023-08-25T22:23:05 |
-| job-dragen-c791f80-45080cd2-0aed-46f40 | job0      | job-dragen-c791f80-45080cd2-0aed-46f40-group0-4 | RUNNING   | s3://demo/NA4/NA4.cram | s3://output/3_78/aggregation/NA4/2023-08-25-22-23-04 | 2023-08-25T22:24:38 |
-| job-dragen-c791f80-45080cd2-0aed-46f40 | job0      | job-dragen-c791f80-45080cd2-0aed-46f40-group0-4 | SUCCEEDED | s3://demo/NA4/NA4.cram | s3://output/3_78/aggregation/NA4/2023-08-25-22-23-04 | 2023-08-25T22:25:27 |
-+----------------------------------------+-----------+-------------------------------------------------+-----------+-------------------------------------------+--------------------------------------------------------------------+---------------------+
+Run queries as shown above to see data ingested into~~~~ the BigQuery:
 
 ```
 ## Troubleshooting

@@ -14,7 +14,18 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/SET
+printf="${DIR}/print"
+$printf "Cleaning up BQ..."
 
-#bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
-gsutil cp "${START_PIPELINE_FILE}" "${TEST_RUN_DIR}"
+source "${DIR}/../SET"
+
+if [[ -z "${PROJECT_ID}" ]]; then
+  echo PROJECT_ID variable is not set. | tee -a "$LOG"
+  exit
+fi
+
+if bq --location="${GCLOUD_REGION}" ls "${DATASET}" 2> /dev/null | grep  "${TASK_STATUS_TABLE_ID}"; then
+  bq rm --quiet "${PROJECT_ID}":"${DATASET}"."${TASK_STATUS_TABLE_ID}"
+fi
+
+bq mk  --schema="${DIR}/../setup/bq_task_status_schema.json" --table "${DATASET}"."${TASK_STATUS_TABLE_ID}"  2> /dev/null

@@ -22,7 +22,7 @@ from commonek.batch_helper import get_job_by_name
 from commonek.csv_helper import trigger_job_from_csv
 from commonek.helper import split_uri_2_bucket_prefix
 from commonek.logging import Logger
-from commonek.params import JOBS_LIST_URI, JOB_LABEL_NAME
+from commonek.params import JOBS_LIST_URI, JOB_LABEL_NAME, TASK_SUCCEEDED, TASK_FAILED
 
 # API clients
 gcs = storage.Client()  # cloud storage
@@ -47,8 +47,8 @@ def get_job_update(event, context):
                 f" region={region}")
 
     found_job = get_job_by_name(job_name=job_name.split("/")[-1])
-    if state == "SUCCEEDED":
-        Logger.info(f"get_job_update - Job state SUCCEEDED, checking scheduling file {JOBS_LIST_URI} "
+    if state in [TASK_SUCCEEDED, TASK_FAILED]:
+        Logger.info(f"get_job_update - Job state {state}, checking scheduling file {JOBS_LIST_URI} "
                     f"for next job to trigger")
         if found_job:
             if JOB_LABEL_NAME in found_job.labels:
@@ -57,7 +57,9 @@ def get_job_update(event, context):
                 bucket_name, file_path = split_uri_2_bucket_prefix(JOBS_LIST_URI)
                 trigger_job_from_csv(bucket_name=bucket_name, file_path=file_path, previous_job_label=found_label)
     else:
-        Logger.info(f"get_job_update - Not triggering next job, since the state of the previous just is not SUCCEEDED")
+        Logger.info(f"get_job_update - Not triggering next job, since the state of the previous job = {state} does "
+                    f"not correspond to task completion, such as"
+                    f" {TASK_SUCCEEDED} or {TASK_FAILED}")
 
 
 if __name__ == "__main__":

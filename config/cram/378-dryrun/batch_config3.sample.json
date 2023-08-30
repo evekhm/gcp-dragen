@@ -4,12 +4,11 @@
       "max_run_duration": "7200s",
       "memory_mib": 512,
       "cpu_milli": 1000,
-      "max_retry_count": 1,
-      "dryrun": true
+      "max_retry_count": 1
     },
     "input_options": {
         "input_type": "cram",
         "input_list": "gs://__IN_BUCKET__/cram/input_list/2_samples.txt",
-        "config": "gs://__CONFIG_BUCKET__/cram_config_378.json"
+        "config": "gs://__CONFIG_BUCKET__/dryrun_config_pass.json"
       }
 }

@@ -17,29 +17,33 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${DIR}"/../SET  > /dev/null 2>&1
 
 # get parameters
-while getopts c:o: flag
+while getopts c:s:o: flag
 do
   case "${flag}" in
     c) END_COUNT=${OPTARG};;
+    s) START_COUNT=${OPTARG};;
     o) OUTPUT=${OPTARG};;
   esac
 done
 
 usage(){
   echo "Usage:"
-  echo "create_input_list.sh -c SAMPLES_COUNT -o OUTPUT_GCS_URI"
-  echo "Example: create_input_list.sh -c 1000 -o gs://$PROJECT_ID-trigger/cram/test/samples.txt"
+  echo "create_input_list.sh [-s START_COUNT] -c END_COUNT -o OUTPUT_GCS_URI"
+  echo "Example: create_input_list.sh -s 50 -c 100 -o gs://$PROJECT_ID-trigger/cram/test/samples.txt"
   exit
 }
 
-START_COUNT=0
 LOCAL_PATH="${DIR}/${END_COUNT}_samples.txt"
 
 if [ -z "$END_COUNT" ] || [ -z "$OUTPUT" ]; then
   usage
 fi
 
-echo "Generating $END_COUNT test samples into $OUTPUT file ..."
+if [ -z "$START_COUNT" ]; then
+  START_COUNT=0
+fi
+
+echo "Generating $START_COUNT-$END_COUNT test samples into $OUTPUT file ..."
 # collaborator_sample_id	cram_file_ref
 #NA12878-SmokeTest	s3://ek-broad-gp-dragen-demo/NA12878/NA12878.cram
 
@@ -48,7 +52,7 @@ counter=$START_COUNT
 while [ $counter -lt $END_COUNT ]
 do
   SAMPLE="NA${counter}"
-  SAMPLE_PATH="s3://${DATA_BUCKET_NAME}/${SAMPLE}/${SAMPLE}.cram"
+  SAMPLE_PATH="gs://${DATA_BUCKET_NAME}/${SAMPLE}/${SAMPLE}.cram"
   echo "${SAMPLE} ${SAMPLE_PATH}" >> ${LOCAL_PATH}
   ((counter++))
 done

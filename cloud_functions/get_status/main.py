@@ -24,7 +24,7 @@ from commonek.helper import split_uri_2_bucket_prefix
 from commonek.batch_helper import get_job_by_uid
 from commonek.bq_helper import stream_tasks_to_bigquery
 from commonek.params import PROJECT_ID, JOBS_INFO_PATH, SAMPLE_ID, INPUT_PATH, OUTPUT_PATH, JOB_LABEL_NAME, INPUT_TYPE, \
-    COMMAND
+    COMMAND, DRAGEN_COMMAND_ENTRY, DRAGEN_SUCCESS_ENTRY, TASK_VERIFIED_OK, TASK_VERIFIED_FAILED, TASK_SUCCEEDED
 from io import StringIO
 import csv
 import re
@@ -33,9 +33,6 @@ from commonek.dragen_command_helper import DragenCommand
 # API clients
 storage_client = storage.Client()
 client = LoggingServiceV2Client()
-
-DRAGEN_COMMAND_ENTRY = "Command Line:"  # Log Entry from Dragen Software
-DRAGEN_SUCCESS_ENTRY = "DRAGEN complete\. Exiting"
 
 
 def get_task_info_from_csv(job_uid: str, task_id: str):
@@ -125,7 +122,7 @@ def get_log_entries(job_uid: str, task_id: str, payload_pattern: str):
     return payload
 
 
-def verify_dragen_success_using_log(job_uid: str, task_id: str):
+def is_dragen_success_check_logging(job_uid: str, task_id: str):
     log_entries = get_log_entries(job_uid, task_id, DRAGEN_SUCCESS_ENTRY)
     if log_entries and len(log_entries) > 0:
         return True
@@ -180,6 +177,23 @@ def get_status(event, context):
 
     sample_id, input_path, output_path, input_type, command = task_info
     now = datetime.datetime.now(datetime.timezone.utc)
+    save_task_to_bq(command, input_path, input_type, job_uid, labels, now, output_path, sample_id, state, task_id)
+
+    if state == TASK_SUCCEEDED:
+        Logger.info(f"get_status - Running Verification step for job_uid={job_uid}, task_id={task_id}, "
+                    f"sample_id={sample_id}")
+        # Do verification using Log
+        verification_status = TASK_VERIFIED_FAILED
+        if is_dragen_success_check_logging(job_uid, task_id):
+            verification_status = TASK_VERIFIED_OK
+        Logger.info(f"get_status - Complete Verification step for job_uid={job_uid}, task_id={task_id}, "
+                    f"sample_id={sample_id} - verification_status={verification_status}")
+        now = datetime.datetime.now(datetime.timezone.utc)
+        save_task_to_bq(command, input_path, input_type, job_uid, labels, now, output_path, sample_id,
+                        verification_status, task_id)
+
+
+def save_task_to_bq(command, input_path, input_type, job_uid, labels, now, output_path, sample_id, state, task_id):
     errors = stream_tasks_to_bigquery([
         {
             "job_id": job_uid,
@@ -203,10 +217,6 @@ def get_status(event, context):
                      f"for case_id {job_uid} and uid {task_id}: {error}")
 
 
-def verify_task():
-    pass
-
-
 if __name__ == "__main__":
     # Using Logger (cram)
     # get_status({
@@ -221,8 +231,17 @@ if __name__ == "__main__":
     # get_task_info_from_log("job-dragen-73a1ea4-a2c792ba-50a8-43190",
     #                        "job-dragen-73a1ea4-a2c792ba-50a8-43190-group0-0")
 
-    verify_dragen_success_using_log(job_uid="job-dragen-73a1ea4-a2c792ba-50a8-43190",
-                  task_id="job-dragen-73a1ea4-a2c792ba-50a8-43190-group0-0")
+    is_dragen_success_check_logging(job_uid="job-dragen-73a1ea4-a2c792ba-50a8-43190",
+                                    task_id="job-dragen-73a1ea4-a2c792ba-50a8-43190-group0-0")
+
+    get_status({
+        'attributes': {
+            "JobUID": "job-dragen-8c7eb1a-9310082b-3dd6-40c20",
+            "NewTaskState": "SUCCEEDED", 'Region': 'us-central1',
+            "TaskUID": "job-dragen-8c7eb1a-9310082b-3dd6-40c20-group0-1"
+        },
+        'data': 'VGFzayBzdGF0ZSB3YXMgdXBkYXRlZDogdGFza1VJRD1qb2ItZHJhZ2VuLWU1ZDJiMjItM2ZjODUzZjktMmU5Yi00ZjA4MC1ncm91cDAtNiwgcHJldmlvdXNTdGF0ZT1QRU5ESU5HLCBjdXJyZW50U3RhdGU9U1VDQ0VFREVELCB0aW1lc3RhbXA9MjAyMy0wOC0yNFQxNjoyMTowMy0wNzowMA=='
+    }, None)
 
     get_status({
         'attributes': {

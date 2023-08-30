@@ -15,6 +15,28 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${DIR}"/SET
+CONFIG=batch_config_ok
 
-#bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
-gsutil cp "${START_PIPELINE_FILE}" gs://"${INPUT_BUCKET_NAME}/cram/378-dryrun/"
+if [[ $1 == "fail" ]]; then
+  CONFIG=batch_config_fail
+fi
+
+if [[ $1 == "pass" ]]; then
+  CONFIG=batch_config_pass
+fi
+
+if [[ $1 == "ok" ]]; then
+  CONFIG=batch_config_ok
+fi
+
+TRIGGER_FILE="${DIR}/tests/START_PIPELINE"
+get_trigger_file(){
+  sed 's|__CONFIG__|'"$1"'|g;
+      ' "${DIR}/tests/START_PIPELINE.sample" > "${DIR}/tests/START_PIPELINE"
+}
+
+
+echo "CONFIG=$CONFIG"
+get_trigger_file $CONFIG
+cat "${TRIGGER_FILE}"
+gsutil cp "${TRIGGER_FILE}" gs://"${INPUT_BUCKET_NAME}/cram/378-dryrun/"

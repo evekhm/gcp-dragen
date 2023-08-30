@@ -18,14 +18,14 @@ source "$DIR/../SET"  > /dev/null 2>&1
 
 PARALLEL=10
 BATCH_SIZE=20
-INPUT="gs://$INPUT_BUCKET_NAME/cram/input_list/100_samples.txt"
+INPUT_20="gs://$INPUT_BUCKET_NAME/cram/input_list/20_samples.txt"
+INPUT_21="gs://$INPUT_BUCKET_NAME/cram/input_list/20_21_samples.txt"
+INPUT_22="gs://$INPUT_BUCKET_NAME/cram/input_list/22_samples.txt"
 
-#PARALLEL=5
-#BATCH_SIZE=10
-#INPUT="gs://$INPUT_BUCKET_NAME/cram/input_list/30_samples.txt"
 export DEBUG=true
 
-#echo "-p $PARALLEL -b $BATCH_SIZE -c gs://$CONFIG_BUCKET_NAME/cram_config_378.json \
-#                      -o ${TEST_RUN_DIR} -s ${INPUT} --dryrun"
-python "${DIR}/prepare_input/main.py" -p $PARALLEL -b $BATCH_SIZE -c gs://$CONFIG_BUCKET_NAME/cram_config_378.json \
-                -o ${TEST_RUN_DIR} -s ${INPUT} --dryrun
+python "${DIR}/prepare_input/main.py" -p $PARALLEL -b $BATCH_SIZE \
+  -c gs://$CONFIG_BUCKET_NAME/dryrun_config_ok.json -s ${INPUT_20} \
+  -c gs://$CONFIG_BUCKET_NAME/dryrun_config_pass.json -s  ${INPUT_21} \
+  -c gs://$CONFIG_BUCKET_NAME/dryrun_config_fail.json -s  ${INPUT_22} \
+  -o ${TEST_RUN_DIR}

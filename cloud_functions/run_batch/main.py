@@ -33,7 +33,8 @@ from commonek.helper import split_uri_2_bucket_prefix
 from commonek.logging import Logger
 from commonek.params import INPUT_PATH, OUTPUT_PATH, SAMPLE_ID, JOBS_INFO_PATH, JOB_LABEL_NAME, \
     JOB_LIST_FILE_NAME, JOBS_LIST_URI, TRIGGER_FILE_NAME, CRAM_INPUT, FASTQ_LIST_INPUT, FASTQ_INPUT, \
-    BATCH_TASK_INDEX, INPUT_TYPE, COMMAND
+    BATCH_TASK_INDEX, INPUT_TYPE, COMMAND, DRAGEN_COMMAND_ENTRY, DRAGEN_SUCCESS_ENTRY, \
+    TASK_SCHEDULED, TASK_VERIFIED_OK, TASK_VERIFIED_FAILED
 from commonek.params import PROJECT_ID, REGION
 
 assert JOBS_INFO_PATH, "JOBS_INFO_PATH is not set"
@@ -133,8 +134,32 @@ def run_dragen_job(event, context):
     if dirs is not None and dirs != "":
         prefix = dirs + "/"
 
+    file_string = ""
+    batch_config_file_name = BATCH_CONFIG_FILE_NAME
+    job_labels = None
+
+    try:
+        blob = bucket.blob(file_path)
+        file_string = blob.download_as_text()
+    except NotFound as exc:
+        Logger.warning(f"File not found {exc}")
+        # Still we want to proceed, will be same behaviour as empty file uploaded
+
+    if file_string != "":  # START_PIPELINE can contain additional info, that could be parsed
+        try:
+            json_string = json.loads(file_string)
+            job_labels = {JOB_LABEL_NAME: json_string[JOB_LABEL_NAME]}
+            batch_config_file_name = json_string["config"]
+            Logger.info(f"run_dragen_job - job_labels = {job_labels}, config_file_name={batch_config_file_name}")
+        except Exception as exc:
+            Logger.warning(f"Caught exception when parsing json file {file_string} - {exc}")
+            pass
+
+        batch_config_file_path = f"{prefix}{batch_config_file_name}"
+        return create_batch_job(bucket_name, batch_config_file_path, job_labels)
+
     jobs_list_path = f"{prefix}{JOB_LIST_FILE_NAME}"
-    # Check if config file or if jobs list is located in the bucket
+    # Check if jobs.csv file or if jobs list is located in the bucket
     if file_exists(bucket_name, jobs_list_path):
         Logger.info(f"run_dragen_job - Handling {jobs_list_path}... ")
         bucket = gcs.get_bucket(bucket_name)
@@ -156,95 +181,67 @@ def run_dragen_job(event, context):
         trigger_job_from_csv(bucket_name, jobs_list_path)
         return
 
-    file_string = ""
-    config_file_name = BATCH_CONFIG_FILE_NAME
-    job_labels = None
+    batch_config_file_path = f"{prefix}{batch_config_file_name}"
+    return create_batch_job(bucket_name, batch_config_file_path, job_labels)
 
-    try:
-        blob = bucket.blob(file_path)
-        file_string = blob.download_as_text()
-    except NotFound as exc:
-        Logger.warning(f"File not found {exc}")
-        # Still we want to proceed, will be same behaviour as empty file uploaded
 
-    if file_string != "":  # START_PIPELINE can contain additional info, that could be parsed
-        try:
-            json_string = json.loads(file_string)
-            job_labels = {JOB_LABEL_NAME: json_string[JOB_LABEL_NAME]}
-            config_file_name = json_string["config"]
-            Logger.info(f"run_dragen_job - job_labels = {job_labels}, config_file_name={config_file_name}")
-        except Exception as exc:
-            Logger.warning(f"Caught exception when parsing json file {file_string} - {exc}")
-            pass
+def create_batch_job(bucket_name, batch_config_path, job_labels):
+    Logger.info(f"create_batch_job - config_path={batch_config_path}")
+    if not file_exists(bucket_name, batch_config_path):
+        Logger.error(f"create_batch_job -  {batch_config_path} file not found")
+        return
 
-    config_file_path = f"{prefix}{config_file_name}"
-    if file_exists(bucket_name, config_file_path):
-        Logger.info(f"run_dragen_job - config_path={config_file_path}")
-        batch_config = load_config(bucket_name=bucket_name, file_path=config_file_path)
-        if batch_config == {}:
-            Logger.error(f"Error: batch_options could not be retrieved.")
+    batch_config = load_config(bucket_name=bucket_name, file_path=batch_config_path)
+    if batch_config == {}:
+        Logger.error(f"create_batch_job - Error: batch_options could not be retrieved.")
+        return
+    else:
+        Logger.info(f"create_batch_job - batch_options={batch_config}")
+    run_options = batch_config.get("run_options", {})
+    input_option = batch_config.get("input_options", {})
+    input_type = input_option.get("input_type")
+    if input_type.lower() == CRAM_INPUT:
+        extension = ".cram"
+    elif input_type.lower() == FASTQ_INPUT:
+        extension = ".ora"
+    else:
+        Logger.error(f"create_batch_job - Error, unsupported type {input_type}")
+        return
+    config_file_name = input_option.get("config", None)
+    if config_file_name:
+        config_bucket, config_prefix = split_uri_2_bucket_prefix(config_file_name)
+        config_options = load_config(config_bucket, config_prefix)
+        if config_options == {}:
+            print(f"create_batch_job - Error, could not load configuration options from {config_file_name}")
             return
+    else:
+        print(f"create_batch_job - Error, config path is not properly specified for the input {input_option}")
+        return
+    samples_list = []
+    input_list_uri = input_option.get("input_list", None)
+    if input_list_uri:
+        samples_list.extend(get_rows_from_file(input_list_uri))
+    input_path = input_option.get("input_path", None)
+    if input_path:
+        samples_list.extend(get_samples_list_from_path(input_path, extension))
+    if len(samples_list) == 0:
+        Logger.error(f"create_batch_job - Error, no input files detected")
+        return
+    Logger.info(f"create_batch_job - samples_list - {len(samples_list)} loaded from input_list_uri={input_list_uri} and "
+                f"input_path={input_path}")
+    dragen_options, jarvice_options = get_options(config_options)
+    command, env_variables = task_info(dragen_options=dragen_options, jarvice_options=jarvice_options,
+                                       samples_list=samples_list, input_type=input_type)
+    task_count = None
+    for key in env_variables:
+        if task_count is not None:
+            assert task_count == len(env_variables[key]), f"Env variables not filled in consistently for all tasks" \
+                                                          f" {env_variables}"
         else:
-            Logger.info(f"batch_options={batch_config}")
-
-        dryrun = False
-        run_options = batch_config.get("run_options", {})
-        if "dryrun" in run_options:
-            dryrun = run_options.get("dryrun")
-
-        input_option = batch_config.get("input_options", {})
-
-        input_type = input_option.get("input_type")
-
-        if input_type.lower() == CRAM_INPUT:
-            extension = ".cram"
-        elif input_type.lower() == FASTQ_INPUT:
-            extension = ".ora"
-        else:
-            Logger.error(f"Error, unsupported type {input_type}")
-            return
-
-        config_file_name = input_option.get("config", None)
-        if config_file_name:
-            config_bucket, config_prefix = split_uri_2_bucket_prefix(config_file_name)
-            config_options = load_config(config_bucket, config_prefix)
-            if config_options == {}:
-                print(f"Error, could not load configuration options from {config_file_name}")
-                return
-        else:
-            print(f"Error, config path is not properly specified for the input {input_option}")
-            return
-
-        samples_list = []
-        input_list_uri = input_option.get("input_list", None)
-        if input_list_uri:
-            samples_list.extend(get_rows_from_file(input_list_uri))
-
-        input_path = input_option.get("input_path", None)
-        if input_path:
-            samples_list.extend(get_samples_list_from_path(input_path, extension))
-
-        if len(samples_list) == 0:
-            Logger.error(f"Error, no input files detected")
-            return
-
-        Logger.info(f"samples_list - {len(samples_list)} loaded from input_list_uri={input_list_uri} and "
-                    f"input_path={input_path}")
-        dragen_options, jarvice_options = get_options(config_options)
-        command, env_variables = task_info(dragen_options=dragen_options, jarvice_options=jarvice_options,
-                                           samples_list=samples_list, input_type=input_type)
-
-        task_count = None
-        for key in env_variables:
-            if task_count is not None:
-                assert task_count == len(env_variables[key]), f"Env variables not filled in consistently for all tasks" \
-                                                              f" {env_variables}"
-            else:
-                task_count = len(env_variables[key])
-
-        return create_script_job(batch_options=run_options, jarvice_options=jarvice_options,
-                                 job_labels=job_labels, input_type=input_type,
-                                 command=command, dryrun=dryrun, env_variables=env_variables)
+            task_count = len(env_variables[key])
+    return create_script_job(batch_options=run_options, jarvice_options=jarvice_options,
+                             job_labels=job_labels, input_type=input_type,
+                             command=command, env_variables=env_variables)
 
 
 def task_info(dragen_options, jarvice_options, samples_list, input_type):
@@ -334,6 +331,7 @@ def get_task_command(dragen_options, jarvice_options, inputs, replace_options):
                 f" machine = {MACHINE}")
 
     jxe_app = jarvice_options.get('jxe_app', 'illumina-dragen_3_7_8n')
+    stub_script = jarvice_options.get('stub', 'jarvice-dragen-stub.sh')
 
     s3_secret_value = get_secret_value(S3_SECRET_NAME, PROJECT_ID)
 
@@ -365,7 +363,7 @@ def get_task_command(dragen_options, jarvice_options, inputs, replace_options):
     for key in dragen_options_replaced:
         dragen_options_str += f""" {key} {dragen_options_replaced[key]}"""
 
-    command = f"jarvice-dragen-stub.sh " \
+    command = f"{stub_script} " \
               f"--project {PROJECT_ID} " \
               f"--network {NETWORK} " \
               f"--subnet {SUBNET} " \
@@ -401,13 +399,12 @@ def get_options(config):
     assert dragen_options != {}, "Error: dragen_options could not be retrieved"
 
     jarvice_options = config.get("jarvice_options", {})
-    assert dragen_options != {}, "Error: jarvice_options could not be retrieved"
+    assert jarvice_options != {}, "Error: jarvice_options could not be retrieved"
 
     return dragen_options, jarvice_options
 
 
-def create_script_job(batch_options, command: DragenCommand, jarvice_options, job_labels, env_variables, input_type,
-                      dryrun=False):
+def create_script_job(batch_options, command: DragenCommand, jarvice_options, job_labels, env_variables, input_type):
     """
       This method shows how to create a sample Batch Job that will run
       a simple command on Cloud Compute instances.
@@ -498,17 +495,9 @@ def create_script_job(batch_options, command: DragenCommand, jarvice_options, jo
     runnable = batch_v1.Runnable()
     runnable.container = batch_v1.Runnable.Container()
 
-    if dryrun:
-        runnable.container.image_uri = "gcr.io/google-containers/busybox"
-        runnable.container.entrypoint = "/bin/sh"
-        runnable.container.commands = [
-            "-c",
-            f"sleep 60 && echo Command Line: {command.script}",
-        ]
-    else:
-        runnable.container.image_uri = image_uri
-        runnable.container.entrypoint = entrypoint
-        runnable.container.commands = ["-c", command.script]
+    runnable.container.image_uri = image_uri
+    runnable.container.entrypoint = entrypoint
+    runnable.container.commands = ["-c", command.script]
 
     # Define what will be done as part of the job.
     task = batch_v1.TaskSpec()
@@ -570,7 +559,7 @@ def stream_data_to_bq(job_id, sample_id, command, input_path, input_type, output
             "job_label": label,
             "task_id": "",
             "sample_id": sample_id,
-            "status": "SCHEDULED",
+            "status": TASK_SCHEDULED,
             "input_type": input_type,
             "input_path": input_path,
             "output_path": magic_replace(output_path, index, task_environments),
@@ -639,8 +628,6 @@ def get_args():
 
     args_parser.add_argument('-d', dest="dir_path",
                              help="Path to input gcs directory where START_PIPELINE file to be uploaded")
-    args_parser.add_argument('-f', dest="file_path",
-                             help="Path to gcs file")
     return args_parser
 
 
@@ -650,11 +637,10 @@ if __name__ == "__main__":
     name = "START_PIPELINE"
 
     args_dir_path = args.dir_path
-    args_file_path = args.file_path
+
     if args_dir_path:
         name = f"{args_dir_path}/START_PIPELINE"
-    elif args_file_path:
-        name = args_file_path
+
     args_bucket_name = f'{PROJECT_ID}-trigger'
     Logger.info(f"Using file_name={name}, bucket={args_bucket_name}")
     run_dragen_job({'bucket': args_bucket_name,

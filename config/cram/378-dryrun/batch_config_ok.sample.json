@@ -1,6 +1,6 @@
 {
     "run_options": {
-      "parallelism": 14,
+      "parallelism": 5,
       "max_run_duration": "7200s",
       "memory_mib": 512,
       "cpu_milli": 1000,
@@ -8,7 +8,7 @@
     },
     "input_options": {
         "input_type": "cram",
-        "input_list": "gs://__IN_BUCKET__/cram/input_list/NA12878_batch.txt",
-        "config": "gs://__CONFIG_BUCKET__/cram_config_378.json"
-    }
+        "input_list": "gs://__IN_BUCKET__/cram/input_list/sample.txt",
+        "config": "gs://__CONFIG_BUCKET__/dryrun_config_ok.json"
+      }
 }
