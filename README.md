@@ -449,7 +449,7 @@ Trigger the pipeline:
 
 Using GCP Console, go to the Batch list and wait for the first job to get Running (from the Queued to Scheduled to Running Status).
 
-Run queries as shown above to see data ingested into~~~~ the BigQuery:
+Run queries as shown above to see data ingested into the BigQuery:
 
 ```
 ## Troubleshooting
