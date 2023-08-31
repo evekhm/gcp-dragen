@@ -3,13 +3,13 @@ WITH
         SELECT
             *
         FROM
-            `dragen-ek-3.dragen_illumina.tasks_status` t
+            `dragen_illumina.tasks_status` t
         WHERE
                 timestamp = (
                 SELECT
                     MAX(timestamp)
                 FROM
-                    `dragen-ek-3.dragen_illumina.tasks_status`
+                    `dragen_illumina.tasks_status`
                 WHERE
                         task_id = t.task_id
                   AND status!= "VERIFIED_OK"
@@ -19,13 +19,13 @@ WITH
         SELECT
             *
         FROM
-            `dragen-ek-3.dragen_illumina.tasks_status` t
+            `dragen_illumina.tasks_status` t
         WHERE
                 timestamp = (
                 SELECT
                     MAX(timestamp)
                 FROM
-                    `dragen-ek-3.dragen_illumina.tasks_status`
+                    `dragen_illumina.tasks_status`
                 WHERE
                         task_id = t.task_id) )
 SELECT
