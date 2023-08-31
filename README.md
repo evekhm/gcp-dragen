@@ -1,4 +1,3 @@
-
 <!-- TOC -->
   * [Introduction](#introduction)
   * [Pre-requisites](#pre-requisites)
@@ -12,15 +11,15 @@
     * [get_status](#getstatus)
     * [job_scheduler](#jobscheduler)
   * [Demo Flows](#demo-flows)
-    * [Sample Dry Run Single task](#sample-dry-run-single-task)
+    * [Dry Run - Job with a single processing task](#dry-run---job-with-a-single-processing-task)
     * [3.7.8 CRAM Smoke Test](#378-cram-smoke-test)
-    * [Dry Run for A list of Jobs](#dry-run-for-a-list-of-jobs)
-    * [Dry Run for 100 Tasks](#dry-run-for-100-tasks)
+    * [Dry Run - a list of Jobs](#dry-run---a-list-of-jobs)
+    * [Dry Run - for 100 Tasks -> Chunk into Jobs](#dry-run---for-100-tasks----chunk-into-jobs)
   * [Troubleshooting](#troubleshooting)
   * [Supported versions](#supported-versions)
   * [References](#references)
   * [Loading batch Job details](#loading-batch-job-details)
-  * [Sharing Code with the Customer](#sharing-code-with-the-customer)
+  * [Sharing Code](#sharing-code~~~~)
 <!-- TOC -->
 
 ## Introduction
@@ -235,7 +234,7 @@ tries to get <job_id>.csv file and get additional information about task (which 
 
 ## Demo Flows
 
-###  Sample Dry Run Single task
+###  Dry Run - Job with a single processing task
 
 To trigger the Job with one task (sample), run the following command:
 ```shell
@@ -312,7 +311,7 @@ Check the Job Log file, it should contain:
 DRAGEN complete. Exiting...
 ```
 
-### Dry Run for A list of Jobs
+### Dry Run - a list of Jobs
 
 During the setup, a test list of Jobs been created and uploaded to: `gs://$PROJECT_ID-trigger/test/jobs.csv`
 This list contains of three jobs:
@@ -397,7 +396,7 @@ sql-scripts/run_query.sh sample NA3
 | job-dragen-461625f-9040151d-96d3-4c7f0 | job0      | job-dragen-461625f-9040151d-96d3-4c7f0-group0-3 | VERIFIED_OK | s3://demo/NA3/NA3.cram | s3://output/3_7_8/aggregation/NA3/2023-08-30-22-31-56 | 2023-08-30T22:34:03 |
 +----------------------------------------+-----------+-------------------------------------------------+-------------+-------------------------------------------+------------------------------------------------------------------+---------------------+
 ```
-### Dry Run for 100 Tasks -> Chunk into Jobs
+### Dry Run - for 100 Tasks -> Chunk into Jobs
 During the setup, a test file with 100 test samples has been generated and uploaded to `gs://$PROJECT_ID-trigger/cram/input_list/100_samples.txt`
 
 > To (re-)generate a samples list file for testing, you can run following command:
@@ -449,9 +448,9 @@ Trigger the pipeline:
 
 Using GCP Console, go to the Batch list and wait for the first job to get Running (from the Queued to Scheduled to Running Status).
 
-Run queries as shown above to see data ingested into the BigQuery:
+Run queries as listed ~~~~ above to see data ingested into the BigQuery.
 
-```
+
 ## Troubleshooting
 
 ### Exhausting ssh login profile
@@ -505,7 +504,7 @@ gcloud batch jobs describe --location us-central1 $JOB_NAME
 ```
 
 
-## Sharing Code with the Customer
+## Sharing Code 
 
 Configure the repo access control so customer can view or download it:
 * Go to [cloud-ce-shared-csr project](https://source.cloud.google.com/cloud-ce-shared-csr?project=cloud-ce-shared-cs) in Cloud Source Repos
