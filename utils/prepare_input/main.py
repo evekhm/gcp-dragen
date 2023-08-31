@@ -112,8 +112,8 @@ def get_args():
         epilog="""
       Examples:
 
-      python main.py -p 15 -b 100 -c gs://$PROJECT_ID-config/dryrun_config_pass.json 
-                -o gs://$PROJECT_ID-trigger/test -s gs://$PROJECT_ID-trigger/cram/input_list/100_samples.txt
+      python main.py -p 14 -b 320 -c gs://$PROJECT_ID-config/cram_config_378.json 
+                -o gs://$PROJECT_ID-trigger/10K_3_7_8 -s gs://$PROJECT_ID-trigger/cram/input_list/10K_samples.txt
       """)
 
     args_parser.add_argument('-p', dest="parallelism",

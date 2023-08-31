@@ -182,6 +182,10 @@ function setup_network(){
     gcloud compute networks subnets create "$GCLOUD_SUBNET" --project="$PROJECT_ID" \
     --range=10.0.0.0/24 --stack-type=IPV4_ONLY --network="$GCLOUD_NETWORK" --region=us-central1
 
+  fi
+  # TODO replace 0.0.0.0/0 with Google Subnet
+  fwrule_exists=$(gcloud compute --project="$PROJECT_ID" firewall-rules describe ingress-ssh 2>/dev/null)
+  if [ -z "$fwrule_exists" ]; then
     gcloud compute --project="$PROJECT_ID" firewall-rules create ingress-ssh \
     --direction=INGRESS --priority=1000 --network="$GCLOUD_NETWORK" --action=ALLOW \
     --rules=tcp:22 --source-ranges=0.0.0.0/0
