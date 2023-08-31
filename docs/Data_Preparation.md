@@ -17,4 +17,5 @@
       ```
 * Upload `lenadata` to `gs://${PROJECT_ID}-input/references/`
     * As sample data, use [lenadata folder](https://drive.google.com/corp/drive/folders/1pOFmVh8YwsH1W9e8En7jxzEYF_0O2rmr). Unzip folder (`unzip lendata-xxxx.zip`) into `data` directory (should end up as `data/lendata/refbin` and `data/lendata/lena_index`)
-  
+
+    

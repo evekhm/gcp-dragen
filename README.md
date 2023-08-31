@@ -16,10 +16,7 @@
     * [3.7.8 CRAM Smoke Test](#378-cram-smoke-test)
     * [Dry Run for A list of Jobs](#dry-run-for-a-list-of-jobs)
     * [Dry Run for 100 Tasks](#dry-run-for-100-tasks)
-  * [Troubleshooting](#troubleshooting)
-    * [Exhausting ssh login profile](#exhausting-ssh-login-profile)
-      * [Error](#error)
-      * [Resolution](#resolution)
+  * [Troubleshooting](#troubleshooting)~~~~
   * [Supported versions](#supported-versions)
   * [References](#references)
   * [Loading batch Job details](#loading-batch-job-details)
