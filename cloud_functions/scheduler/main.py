@@ -30,48 +30,63 @@ gcs = storage.Client()  # cloud storage
 
 def get_job_update(event, context):
     Logger.info(f"get_job_update - Event received {event} with context {context}")
-    data = base64.b64decode(event['data']).decode('utf-8')
-    Logger.info(f'get_job_update - data={data}')
+    data = base64.b64decode(event["data"]).decode("utf-8")
+    Logger.info(f"get_job_update - data={data}")
 
-    if 'attributes' not in event:
-        Logger.error("get_job_update - Received message is not in the expected format, missing attributes")
+    if "attributes" not in event:
+        Logger.error(
+            "get_job_update - Received message is not in the expected format, missing attributes"
+        )
         return
 
-    attributes = event['attributes']
-    job_uid = attributes['JobUID']
-    job_name = attributes['JobName']
-    state = attributes['NewJobState']
-    region = attributes['Region']
-    Logger.info(f"get_job_update - Received job state change event for job_uid={job_uid}, new_state={state}, "
-                f"job_name={job_name}"
-                f" region={region}")
+    attributes = event["attributes"]
+    job_uid = attributes["JobUID"]
+    job_name = attributes["JobName"]
+    state = attributes["NewJobState"]
+    region = attributes["Region"]
+    Logger.info(
+        f"get_job_update - Received job state change event for job_uid={job_uid}, new_state={state}, "
+        f"job_name={job_name}"
+        f" region={region}"
+    )
 
     found_job = get_job_by_name(job_name=job_name.split("/")[-1])
     if state in [TASK_SUCCEEDED, TASK_FAILED]:
-        Logger.info(f"get_job_update - Job state {state}, checking scheduling file {JOBS_LIST_URI} "
-                    f"for next job to trigger")
+        Logger.info(
+            f"get_job_update - Job state {state}, checking scheduling file {JOBS_LIST_URI} "
+            f"for next job to trigger"
+        )
         if found_job:
             if JOB_LABEL_NAME in found_job.labels:
                 found_label = found_job.labels[JOB_LABEL_NAME]
                 Logger.info(f"get_job_update - label = {found_label}")
                 bucket_name, file_path = split_uri_2_bucket_prefix(JOBS_LIST_URI)
-                trigger_job_from_csv(bucket_name=bucket_name, file_path=file_path, previous_job_label=found_label)
+                trigger_job_from_csv(
+                    bucket_name=bucket_name,
+                    file_path=file_path,
+                    previous_job_label=found_label,
+                )
     else:
-        Logger.info(f"get_job_update - Not triggering next job, since the state of the previous job = {state} does "
-                    f"not correspond to task completion, such as"
-                    f" {TASK_SUCCEEDED} or {TASK_FAILED}")
+        Logger.info(
+            f"get_job_update - Not triggering next job, since the state of the previous job = {state} does "
+            f"not correspond to task completion, such as"
+            f" {TASK_SUCCEEDED} or {TASK_FAILED}"
+        )
 
 
 if __name__ == "__main__":
-    get_job_update({
-        'attributes': {
-            "JobName": "projects/871790193467/locations/us-central1/jobs/job-dragen-10d80953035b408ea43ce6d80e6bc6d6",
-             "JobUID": "job-dragen-10d8095-91293085-af21-40be0",
-             "NewJobState": "SUCCEEDED",
-             'Region': 'us-central1'
+    get_job_update(
+        {
+            "attributes": {
+                "JobName": "projects/871790193467/locations/us-central1/jobs/job-dragen-10d80953035b408ea43ce6d80e6bc6d6",
+                "JobUID": "job-dragen-10d8095-91293085-af21-40be0",
+                "NewJobState": "SUCCEEDED",
+                "Region": "us-central1",
+            },
+            "data": "Sm9iIHN0YXRlIHdhcyB1cGRhdGVkOiBqb2JOYW1lPXByb2plY3RzLzg3MTc5MDE5MzQ2Ny9sb2NhdGlvbnMvdXMtY2VudHJhbDEvam9icy9qb2ItZHJhZ2VuLWU1ZDJiMjJlMmJkMjRlOWE5MDJlZWMyMmE4ODhkZGM3LCBqb2JVSUQ9am9iLWRyYWdlbi1lNWQyYjIyLTNmYzg1M2Y5LTJlOWItNGYwODAsIHByZXZpb3VzU3RhdGU9UlVOTklORywgY3VycmVudFN0YXRlPVNVQ0NFRURFRCwgdGltZXN0YW1wPTIwMjMtMDgtMjRUMTY6MjE6MTQtMDc6MDA=",
         },
-        'data':  'Sm9iIHN0YXRlIHdhcyB1cGRhdGVkOiBqb2JOYW1lPXByb2plY3RzLzg3MTc5MDE5MzQ2Ny9sb2NhdGlvbnMvdXMtY2VudHJhbDEvam9icy9qb2ItZHJhZ2VuLWU1ZDJiMjJlMmJkMjRlOWE5MDJlZWMyMmE4ODhkZGM3LCBqb2JVSUQ9am9iLWRyYWdlbi1lNWQyYjIyLTNmYzg1M2Y5LTJlOWItNGYwODAsIHByZXZpb3VzU3RhdGU9UlVOTklORywgY3VycmVudFN0YXRlPVNVQ0NFRURFRCwgdGltZXN0YW1wPTIwMjMtMDgtMjRUMTY6MjE6MTQtMDc6MDA='
-    }, None)
+        None,
+    )
 
     # get_job_update({
     #     'attributes': {
@@ -82,7 +97,3 @@ if __name__ == "__main__":
     #     },
     #     'data':  'Sm9iIHN0YXRlIHdhcyB1cGRhdGVkOiBqb2JOYW1lPXByb2plY3RzLzg3MTc5MDE5MzQ2Ny9sb2NhdGlvbnMvdXMtY2VudHJhbDEvam9icy9qb2ItZHJhZ2VuLWU1ZDJiMjJlMmJkMjRlOWE5MDJlZWMyMmE4ODhkZGM3LCBqb2JVSUQ9am9iLWRyYWdlbi1lNWQyYjIyLTNmYzg1M2Y5LTJlOWItNGYwODAsIHByZXZpb3VzU3RhdGU9UlVOTklORywgY3VycmVudFN0YXRlPVNVQ0NFRURFRCwgdGltZXN0YW1wPTIwMjMtMDgtMjRUMTY6MjE6MTQtMDc6MDA='
     # }, None)
-
-
-
-

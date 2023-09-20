@@ -26,6 +26,11 @@ function substitute(){
 #  echo $OUTPUT_FILE
   sed 's|__IMAGE__|'"$IMAGE_URI"'|g;
       s|__JXE_APP__|'"$JXE_APP"'|g;
+      s|__STUB__|'"$STUB"'|g;
+      s|__GCLOUD_MACHINE__|'"$GCLOUD_MACHINE"'|g;
+      s|__API_HOST__|'"$API_HOST"'|g;
+      s|__JARVICE_MACHINE_TYPE__|'"$JARVICE_MACHINE_TYPE"'|g;
+      s|__ENTRYPOINT__|'"$ENTRYPOINT"'|g;
       s|__OUT_BUCKET__|'"$OUTPUT_BUCKET_NAME"'|g;
       s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
       s|__CONFIG_BUCKET__|'"$CONFIG_BUCKET_NAME"'|g;

@@ -28,33 +28,34 @@ logging.basicConfig(level=logging.INFO)
 # utility to get stdout when running locally utility testing scripts
 debug = os.environ.get("DEBUG", None)
 
-class Logger():
-  """class def handling logs."""
-  @staticmethod
-  def info(message):
-    """Display info logs."""
-    logging.info(message)
-    if debug:
-      print(message)
 
+class Logger:
+    """class def handling logs."""
 
-  @staticmethod
-  def warning(message):
-    """Display warning logs."""
-    logging.warning(message)
-    if debug:
-      print(message)
+    @staticmethod
+    def info(message):
+        """Display info logs."""
+        logging.info(message)
+        if debug:
+            print(message)
 
-  @staticmethod
-  def error(message):
-    """Display error logs."""
-    logging.error(message)
-    if debug:
-      print(message)
+    @staticmethod
+    def warning(message):
+        """Display warning logs."""
+        logging.warning(message)
+        if debug:
+            print(message)
 
-  @staticmethod
-  def debug(message):
-    """Display debug logs."""
-    logging.debug(message)
-    if debug:
-      print(message)
+    @staticmethod
+    def error(message):
+        """Display error logs."""
+        logging.error(message)
+        if debug:
+            print(message)
+
+    @staticmethod
+    def debug(message):
+        """Display debug logs."""
+        logging.debug(message)
+        if debug:
+            print(message)

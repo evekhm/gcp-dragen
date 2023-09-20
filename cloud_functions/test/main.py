@@ -17,6 +17,6 @@ from commonek.params import SAMPLE_ID
 
 hello_world(SAMPLE_ID)
 
+
 def run(event, context):
     hello_world(SAMPLE_ID)
-

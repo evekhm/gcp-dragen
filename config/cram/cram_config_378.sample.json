@@ -21,7 +21,7 @@
         "--qc-cross-cont-vcf": "s3://__DATA_BUCKET__/References/SNP_NCBI_GRCh38.vcf",
         "--qc-coverage-region-2": "s3://__DATA_BUCKET__/References/acmg59_allofus_19dec2019_GRC38_wGenes_NEW.bed",
         "--qc-coverage-reports-2": "cov_report ",
-        "--qc-coverage-region-3": "s3://__DATA_BUCKET__/References/PGx_singleSite_GRCh38_09nov2020.bed ",
+        "--qc-coverage-region-3": "s3://__DATA_BUCKET__/References/PGx_singleSite_GRCh38_09nov2020.bed",
         "--qc-coverage-reports-3": "cov_report ",
         "--vc-hard-filter": "\"'DRAGENHardQUAL:all:QUAL\\<5.0\\;LowDepth:all:DP\\<=1'\"",
         "--qc-coverage-ignore-overlaps": "true",
@@ -30,9 +30,11 @@
         "--soft-read-trimmers": "none"
     },
     "jarvice_options": {
-        "entrypoint": "/bin/bash",
-        "stub": "jarvice-dragen-stub.sh",
-        "jxe_app": "illumina-dragen_3_7_8n",
+        "dragen_app": "illumina-dragen_3_7_8n",
+        "entrypoint": "__ENTRYPOINT__",
+        "stub": "__STUB__",
+        "jarvice_machine_type": "__JARVICE_MACHINE_TYPE__",
+        "api_host": "__API_HOST__",
         "image_uri": "__IMAGE__"
     }
 }

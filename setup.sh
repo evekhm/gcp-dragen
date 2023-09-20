@@ -37,6 +37,16 @@ gcloud config set project $PROJECT_ID
 source "${DIR}"/SET
 
 ### Functions
+function create_secret(){
+  secret_name=$1
+  secret_value=$2
+  exists=$(gcloud secrets describe "${secret_name}" 2> /dev/null)
+  if [ -z "$exists" ]; then
+    $printf "Creating $secret_name secret..."  | tee -a "$LOG"
+    printf "$secret_value" | gcloud secrets create "$secret_name" --replication-policy="user-managed" --project $PROJECT_ID  --data-file=-  --locations=$GCLOUD_REGION
+  fi
+}
+
 function create_pubsub_topic(){
   TOPIC_ID=$1
 
@@ -161,14 +171,37 @@ function setup_secrets(){
 
   LICENSE_SECRET_KEY=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".illumina_license" | tr -d '"')
   if [ -z "$LICENSE_SECRET_KEY" ] ; then
-    echo "$LICENSE_SECRET_KEY was not created properly" | tee -a "$LOG"
+    echo "$LICENSE_SECRET was not created properly, missing illumina_license" | tee -a "$LOG"
     echo "Try running following command to debug:" | tee -a "$LOG"
-    echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
-    echo "  gcloud secrets versions list  $LICENSE_SECRET_KEY --project=$PROJECT_ID " | tee -a "$LOG"
+    echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+    echo "  gcloud secrets versions list  $LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
     exit
-  else
-    $printf "Verified $LICENSE_SECRET secret - Success!" | tee -a "$LOG"
   fi
+
+  # For the New batch Flow (secrets required separately)
+  create_secret "${ILLUMINA_LIC_SERVER_SECRET_NAME}" "https://${LICENSE_SECRET_KEY}@license.edicogenome.com"
+
+  JARVICE_API_KEY=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".jxe_apikey" | tr -d '"')
+  if [ -z "$JARVICE_API_KEY" ] ; then
+    echo "$LICENSE_SECRET was not created properly, missing jxe_apikey" | tee -a "$LOG"
+    echo "Try running following command to debug:" | tee -a "$LOG"
+    echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+    echo "  gcloud secrets versions list  $LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+    exit
+  fi
+  create_secret "${JARVICE_API_KEY_SECRET_NAME}" "${JARVICE_API_KEY}"
+
+  JARVICE_API_USERNAME=$(gcloud secrets versions access latest --secret="$LICENSE_SECRET" --project=$PROJECT_ID | jq ".jxe_username" | tr -d '"')
+  if [ -z "$JARVICE_API_USERNAME" ] ; then
+    echo "$LICENSE_SECRET was not created properly, missing jxe_apikey" | tee -a "$LOG"
+    echo "Try running following command to debug:" | tee -a "$LOG"
+    echo "  gcloud secrets versions access latest --secret=$LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+    echo "  gcloud secrets versions list  $LICENSE_SECRET --project=$PROJECT_ID " | tee -a "$LOG"
+    exit
+  fi
+  create_secret "${JARVICE_API_USERNAME_SECRET_NAME}" "${JARVICE_API_USERNAME}"
+
+  $printf "Verified $LICENSE_SECRET secret - Success!" | tee -a "$LOG"
 }
 
 function setup_network(){
@@ -183,12 +216,13 @@ function setup_network(){
     --range=10.0.0.0/24 --stack-type=IPV4_ONLY --network="$GCLOUD_NETWORK" --region=us-central1
 
   fi
-  # TODO replace 0.0.0.0/0 with Google Subnet
-  fwrule_exists=$(gcloud compute --project="$PROJECT_ID" firewall-rules describe ingress-ssh 2>/dev/null)
+
+  # FW rule for Regional Extension to access The JARVICE API hosted by the Regional Extension
+  fwrule_exists=$(gcloud compute --project="$PROJECT_ID" firewall-rules describe jarvice-api 2>/dev/null)
   if [ -z "$fwrule_exists" ]; then
-    gcloud compute --project="$PROJECT_ID" firewall-rules create ingress-ssh \
-    --direction=INGRESS --priority=1000 --network="$GCLOUD_NETWORK" --action=ALLOW \
-    --rules=tcp:22 --source-ranges=0.0.0.0/0
+    gcloud compute --project="$PROJECT_ID" firewall-rules create jarvice-api \
+    --direction=EGRESS --priority=1000 --network="$GCLOUD_NETWORK" --action=ALLOW \
+    --rules=tcp:443 --destination-ranges=35.184.114.150
   fi
 }
 
@@ -233,6 +267,11 @@ function setup_hmac_keys(){
   else
     $printf  "Verified $S3_SECRET for HMAC keys - Success!" | tee -a "$LOG"
   fi
+
+  # For the New batch Flow
+  create_secret "${S3_ACCESS_KEY_SECRET_NAME}" "${S3_ACCESS_KEY}"
+  create_secret "${S3_SECRET_KEY_SECRET_NAME}" "${S3_SECRET_KEY}"
+
 }
 
 function setup_job_service_account(){
@@ -311,9 +350,10 @@ setup_secrets
 setup_network
 
 $printf "Setting up Cloud Storage"  | tee -a "$LOG"
-create_bucket_regional "${INPUT_BUCKET_NAME}"  # for eventarc to work with cloud function gen2
+create_bucket "${INPUT_BUCKET_NAME}"
 create_bucket "${DATA_BUCKET_NAME}"
 create_bucket "${CONFIG_BUCKET_NAME}"
+create_bucket "${OUTPUT_BUCKET_NAME}"
 gsutil versioning set on "gs://${CONFIG_BUCKET_NAME}"
 
 setup_hmac_keys

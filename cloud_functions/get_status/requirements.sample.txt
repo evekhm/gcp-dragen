@@ -1,4 +1,4 @@
-google-cloud-batch==0.5.0
+google-cloud-batch==0.17.0
 google-cloud-logging==3.2.5
 google-cloud-storage==2.9.0
 google-cloud-bigquery==3.4.1

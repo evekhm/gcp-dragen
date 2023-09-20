@@ -28,8 +28,8 @@ def get_rows_from_file(file_uri: str, skip_header=True):
     bucket = storage_client.get_bucket(bucket_name)
 
     blob = bucket.blob(file_name)
-    text = blob.download_as_text().replace('\r', '').replace('\t', ' ')
-    lines = text.split('\n')
+    text = blob.download_as_text().replace("\r", "").replace("\t", " ")
+    lines = text.split("\n")
 
     rows = []
     line_nr = 0

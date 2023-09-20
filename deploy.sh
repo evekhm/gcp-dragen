@@ -52,15 +52,18 @@ gcloud functions deploy $CLOUD_FUNCTION_NAME_RUN_BATCH \
     --set-env-vars JOB_SERVICE_ACCOUNT=$JOB_SERVICE_ACCOUNT \
     --set-env-vars GCLOUD_MACHINE=$GCLOUD_MACHINE \
     --set-env-vars TRIGGER_FILE_NAME=$TRIGGER_FILE_NAME \
-    --set-env-vars S3_SECRET=$S3_SECRET \
+    --set-env-vars S3_ACCESS_KEY_SECRET_NAME=$S3_ACCESS_KEY_SECRET_NAME \
+    --set-env-vars S3_SECRET_KEY_SECRET_NAME=$S3_SECRET_KEY_SECRET_NAME \
+    --set-env-vars ILLUMINA_LIC_SERVER_SECRET_NAME=$ILLUMINA_LIC_SERVER_SECRET_NAME \
+    --set-env-vars JARVICE_API_KEY_SECRET_NAME=$JARVICE_API_KEY_SECRET_NAME \
+    --set-env-vars JARVICE_API_USERNAME_SECRET_NAME=$JARVICE_API_USERNAME_SECRET_NAME \
     --set-env-vars JOBS_INFO_PATH=$JOBS_INFO_PATH \
-    --set-env-vars LICENSE_SECRET=$LICENSE_SECRET \
     --set-env-vars BIGQUERY_DB_TASKS=$BIGQUERY_DB_TASKS \
     --set-env-vars PROJECT_ID=$PROJECT_ID \
     --set-env-vars JOBS_LIST_URI=$JOBS_LIST_URI \
     --set-env-vars PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE=${PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE} \
     --set-env-vars PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE=${PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE} \
-    --trigger-resource=gs://${INPUT_BUCKET_NAME} \
+    --trigger-resource=gs://"${INPUT_BUCKET_NAME}" \
     --trigger-event=google.storage.object.finalize --docker-registry=artifact-registry
 
 sed 's|__GCLOUD_REGION__|'"$GCLOUD_REGION"'|g;

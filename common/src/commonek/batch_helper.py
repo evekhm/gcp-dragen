@@ -60,7 +60,8 @@ def get_job_by_uid(job_uid: str) -> batch_v1.Job:
     """
     client = batch_v1.BatchServiceClient()
 
-    for job in list(client.list_jobs(parent=f"projects/{PROJECT_ID}/locations/{REGION}")):
+    for job in list(
+        client.list_jobs(parent=f"projects/{PROJECT_ID}/locations/{REGION}")
+    ):
         if job.uid == job_uid:
             return job
-

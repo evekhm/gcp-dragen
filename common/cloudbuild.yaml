@@ -5,9 +5,9 @@ steps:
   - name: python
     entrypoint: python
     args:
-      - '-m'
-      - 'twine'
-      - 'upload'
-      - '--repository-url'
-      - 'https://${_LOCATION}-python.pkg.dev/$PROJECT_ID/${_REPOSITORY}/'
-      - 'dist/*'
+      - "-m"
+      - "twine"
+      - "upload"
+      - "--repository-url"
+      - "https://${_LOCATION}-python.pkg.dev/$PROJECT_ID/${_REPOSITORY}/"
+      - "dist/*"

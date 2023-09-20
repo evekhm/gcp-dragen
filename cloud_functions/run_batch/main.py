@@ -19,23 +19,35 @@ import datetime
 import json
 import os
 import uuid
+
 from google.api_core.exceptions import NotFound
 from google.cloud import batch_v1
 from google.cloud import secretmanager
 from google.cloud import storage
-from google.cloud.batch_v1.types import JobStatus
-
 from commonek.bq_helper import stream_tasks_to_bigquery
 from commonek.csv_helper import trigger_job_from_csv
-from commonek.gcs_helper import get_rows_from_file, file_exists
 from commonek.dragen_command_helper import DragenCommand
+from commonek.gcs_helper import file_exists
+from commonek.gcs_helper import get_rows_from_file
 from commonek.helper import split_uri_2_bucket_prefix
 from commonek.logging import Logger
-from commonek.params import INPUT_PATH, OUTPUT_PATH, SAMPLE_ID, JOBS_INFO_PATH, JOB_LABEL_NAME, \
-    JOB_LIST_FILE_NAME, JOBS_LIST_URI, TRIGGER_FILE_NAME, CRAM_INPUT, FASTQ_LIST_INPUT, FASTQ_INPUT, \
-    BATCH_TASK_INDEX, INPUT_TYPE, COMMAND, DRAGEN_COMMAND_ENTRY, DRAGEN_SUCCESS_ENTRY, \
-    TASK_SCHEDULED, TASK_VERIFIED_OK, TASK_VERIFIED_FAILED
-from commonek.params import PROJECT_ID, REGION
+from commonek.params import BATCH_TASK_INDEX
+from commonek.params import COMMAND
+from commonek.params import CRAM_INPUT
+from commonek.params import FASTQ_INPUT
+from commonek.params import FASTQ_LIST_INPUT
+from commonek.params import INPUT_PATH
+from commonek.params import INPUT_TYPE
+from commonek.params import JOBS_INFO_PATH
+from commonek.params import JOBS_LIST_URI
+from commonek.params import JOB_LABEL_NAME
+from commonek.params import JOB_LIST_FILE_NAME
+from commonek.params import OUTPUT_PATH
+from commonek.params import PROJECT_ID
+from commonek.params import REGION
+from commonek.params import SAMPLE_ID
+from commonek.params import TASK_SCHEDULED
+from commonek.params import TRIGGER_FILE_NAME
 
 assert JOBS_INFO_PATH, "JOBS_INFO_PATH is not set"
 BATCH_CONFIG_FILE_NAME = "batch_config.json"
@@ -44,19 +56,34 @@ gcs = storage.Client()  # cloud storage
 sm = None  # secret_manager
 batch = None  # batch job client
 
-JOB_NAME = os.getenv('JOB_NAME_SHORT', "job-dragen")
-NETWORK = os.getenv('GCLOUD_NETWORK', "default")
-SUBNET = os.getenv('GCLOUD_SUBNET', "default")
-MACHINE = os.getenv('GCLOUD_MACHINE', "n1-standard-2")
+JOB_NAME = os.getenv("JOB_NAME_SHORT", "dragen-job")
+NETWORK = os.getenv("GCLOUD_NETWORK", "default")
+SUBNET = os.getenv("GCLOUD_SUBNET", "default")
 
-SERVICE_ACCOUNT_EMAIL = os.getenv('JOB_SERVICE_ACCOUNT', f"illumina-script-sa@{PROJECT_ID}.iam.gserviceaccount.com")
-LICENSE_SECRET = os.getenv('LICENSE_SECRET', "license_secret_key")
-S3_SECRET_NAME = os.getenv('S3_SECRET', "s3_hmac_secret_key")
-IMAGE_URI_DEFAULT = os.getenv('IMAGE_URI', "us-docker.pkg.dev/jarvice/images/illumina-dragen:dev")
-PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE = os.getenv('PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE',
-                                                 "job-dragen-task-state-change-topic")
-PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE = os.getenv('PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE',
-                                                "job-dragen-job-state-change-topic")
+# Secrets
+S3_ACCESS_KEY_SECRET_NAME = os.getenv("S3_ACCESS_KEY_SECRET_NAME", "batchS3AccessKey")
+S3_SECRET_KEY_SECRET_NAME = os.getenv("S3_SECRET_KEY_SECRET_NAME", "batchS3SecretKey")
+ILLUMINA_LIC_SERVER_SECRET_NAME = os.getenv(
+    "ILLUMINA_LIC_SERVER_SECRET_NAME", "illuminaLicServer"
+)
+JARVICE_API_KEY_SECRET_NAME = os.getenv("JARVICE_API_KEY_SECRET_NAME", "jarviceApiKey")
+JARVICE_API_USERNAME_SECRET_NAME = os.getenv(
+    "JARVICE_API_USERNAME_SECRET_NAME", "jarviceApiUsername"
+)
+
+
+SERVICE_ACCOUNT_EMAIL = os.getenv(
+    "JOB_SERVICE_ACCOUNT", f"illumina-script-sa@{PROJECT_ID}.iam.gserviceaccount.com"
+)
+IMAGE_URI_DEFAULT = os.getenv(
+    "IMAGE_URI", "us-docker.pkg.dev/jarvice/images/jarvice-dragen-service:1.0-rc.5"
+)
+PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE = os.getenv(
+    "PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE", "job-dragen-task-state-change-topic"
+)
+PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE = os.getenv(
+    "PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE", "job-dragen-job-state-change-topic"
+)
 
 
 def load_config(bucket_name, file_path, recursive_find=False):
@@ -68,31 +95,40 @@ def load_config(bucket_name, file_path, recursive_find=False):
             buc = gcs.get_bucket(bucket_name)
             blob = buc.blob(file_path)
             if blob.exists():
-                Logger.info(f"======== loading configuration from gs://{bucket_name}/{file_path}...")
+                Logger.info(
+                    f"======== loading configuration from gs://{bucket_name}/{file_path}..."
+                )
                 data = json.loads(blob.download_as_text(encoding="utf-8"))
                 return data
             elif recursive_find:
                 Logger.warning(
-                    f"Warning: file_path = {file_path} does not exist inside {bucket_name}. ")
+                    f"Warning: file_path = {file_path} does not exist inside {bucket_name}. "
+                )
                 if file_path != os.path.basename(file_path):
                     dir_path = "/".join(os.path.dirname(file_path).split("/")[:-1])
                     Logger.info(
-                        f"Checking if {file_name} exists in the top level folder {dir_path}.")
+                        f"Checking if {file_name} exists in the top level folder {dir_path}."
+                    )
                     if dir_path == "":
                         file_path = file_name
                     else:
                         file_path = f"{dir_path}/{file_name}"
                     return load_config(bucket_name, file_path)
                 else:
-                    Logger.error(f"Error: file gs://{bucket_name}/{file_path} does not exist")
+                    Logger.error(
+                        f"Error: file gs://{bucket_name}/{file_path} does not exist"
+                    )
             else:
-                Logger.error(f"Error: file gs://{bucket_name}/{file_path} does not exist")
+                Logger.error(
+                    f"Error: file gs://{bucket_name}/{file_path} does not exist"
+                )
 
         else:
             Logger.error(f"Error: bucket does not exist {bucket_name}")
     except Exception as e:
         Logger.error(
-            f"Error: while obtaining file from GCS gs://{bucket_name}/{file_path} {e}")
+            f"Error: while obtaining file from GCS gs://{bucket_name}/{file_path} {e}"
+        )
     return {}
 
 
@@ -100,30 +136,33 @@ def run_dragen_job(event, context):
     Logger.info(event)
     bucket_name, file_path = None, None
 
-    if 'bucket' in event:
-        bucket_name = event['bucket']
+    if "bucket" in event:
+        bucket_name = event["bucket"]
 
     if "name" in event:
-        file_path = event['name']
+        file_path = event["name"]
 
     assert bucket_name, "Bucket unknown where to run pipeline"
     assert file_path, "Filename unknown"
 
-    Logger.info(f"run_dragen_job - Using PROJECT_ID = {PROJECT_ID}, region = {REGION},"
-                f" job_name = {JOB_NAME}, network = {NETWORK},"
-                f" subnet = {SUBNET}, "
-                f"service_account_email = {SERVICE_ACCOUNT_EMAIL},"
-                f" machine = {MACHINE}")
+    Logger.info(
+        f"run_dragen_job - Using PROJECT_ID = {PROJECT_ID}, region = {REGION},"
+        f" job_name = {JOB_NAME}, network = {NETWORK},"
+        f" subnet = {SUBNET}, "
+        f"service_account_email = {SERVICE_ACCOUNT_EMAIL}"
+    )
 
     # file=inputs/START_PIPELINE
     # bucket
     Logger.info(
-        f"run_dragen_job - Received GCS finalized event on bucket={bucket_name}, file_path={file_path} ")
+        f"run_dragen_job - Received GCS finalized event on bucket={bucket_name}, file_path={file_path} "
+    )
     filename = os.path.basename(file_path)
 
     if filename != TRIGGER_FILE_NAME:
         Logger.info(
-            f"run_dragen_job - Skipping action on {filename}, since waiting for {TRIGGER_FILE_NAME} to trigger pipe-line")
+            f"run_dragen_job - Skipping action on {filename}, since waiting for {TRIGGER_FILE_NAME} to trigger pipe-line"
+        )
         return
 
     Logger.info(f"run_dragen_job - handling {TRIGGER_FILE_NAME}...")
@@ -145,14 +184,20 @@ def run_dragen_job(event, context):
         Logger.warning(f"File not found {exc}")
         # Still we want to proceed, will be same behaviour as empty file uploaded
 
-    if file_string != "":  # START_PIPELINE can contain additional info, that could be parsed
+    if (
+        file_string != ""
+    ):  # START_PIPELINE can contain additional info, that could be parsed
         try:
             json_string = json.loads(file_string)
             job_labels = {JOB_LABEL_NAME: json_string[JOB_LABEL_NAME]}
             batch_config_file_name = json_string["config"]
-            Logger.info(f"run_dragen_job - job_labels = {job_labels}, config_file_name={batch_config_file_name}")
+            Logger.info(
+                f"run_dragen_job - job_labels = {job_labels}, config_file_name={batch_config_file_name}"
+            )
         except Exception as exc:
-            Logger.warning(f"Caught exception when parsing json file {file_string} - {exc}")
+            Logger.warning(
+                f"Caught exception when parsing json file {file_string} - {exc}"
+            )
             pass
 
         batch_config_file_path = f"{prefix}{batch_config_file_name}"
@@ -170,9 +215,13 @@ def run_dragen_job(event, context):
         # Make sure that job_list file is uploaded to where scheduler is expected to read it from
         # (cannot have multiple scheduled jobs!)
         if f"gs://{bucket_name}/{jobs_list_path}" != JOBS_LIST_URI:
-            Logger.info(f"run_dragen_job - Copying gs://{bucket_name}/{jobs_list_path} to "
-                        f"location={JOBS_LIST_URI} where scheduler expects it to be... ")
-            bucket_name_jobs_list, jobs_list_uri_path = split_uri_2_bucket_prefix(JOBS_LIST_URI)
+            Logger.info(
+                f"run_dragen_job - Copying gs://{bucket_name}/{jobs_list_path} to "
+                f"location={JOBS_LIST_URI} where scheduler expects it to be... "
+            )
+            bucket_name_jobs_list, jobs_list_uri_path = split_uri_2_bucket_prefix(
+                JOBS_LIST_URI
+            )
             bucket = gcs.get_bucket(bucket_name_jobs_list)
             jobs_list_blob_copy = bucket.blob(jobs_list_uri_path)
             jobs_list_blob_copy.upload_from_string(csv_string)
@@ -193,7 +242,7 @@ def create_batch_job(bucket_name, batch_config_path, job_labels):
 
     batch_config = load_config(bucket_name=bucket_name, file_path=batch_config_path)
     if batch_config == {}:
-        Logger.error(f"create_batch_job - Error: batch_options could not be retrieved.")
+        Logger.error("create_batch_job - Error: batch_options could not be retrieved.")
         return
     else:
         Logger.info(f"create_batch_job - batch_options={batch_config}")
@@ -212,10 +261,14 @@ def create_batch_job(bucket_name, batch_config_path, job_labels):
         config_bucket, config_prefix = split_uri_2_bucket_prefix(config_file_name)
         config_options = load_config(config_bucket, config_prefix)
         if config_options == {}:
-            print(f"create_batch_job - Error, could not load configuration options from {config_file_name}")
+            print(
+                f"create_batch_job - Error, could not load configuration options from {config_file_name}"
+            )
             return
     else:
-        print(f"create_batch_job - Error, config path is not properly specified for the input {input_option}")
+        print(
+            f"create_batch_job - Error, config path is not properly specified for the input {input_option}"
+        )
         return
     samples_list = []
     input_list_uri = input_option.get("input_list", None)
@@ -225,27 +278,42 @@ def create_batch_job(bucket_name, batch_config_path, job_labels):
     if input_path:
         samples_list.extend(get_samples_list_from_path(input_path, extension))
     if len(samples_list) == 0:
-        Logger.error(f"create_batch_job - Error, no input files detected")
+        Logger.error("create_batch_job - Error, no input files detected")
         return
-    Logger.info(f"create_batch_job - samples_list - {len(samples_list)} loaded from input_list_uri={input_list_uri} and "
-                f"input_path={input_path}")
+    Logger.info(
+        f"create_batch_job - samples_list - {len(samples_list)} loaded from input_list_uri={input_list_uri} and "
+        f"input_path={input_path}"
+    )
     dragen_options, jarvice_options = get_options(config_options)
-    command, env_variables = task_info(dragen_options=dragen_options, jarvice_options=jarvice_options,
-                                       samples_list=samples_list, input_type=input_type)
+    command, env_variables = task_info(
+        dragen_options=dragen_options,
+        jarvice_options=jarvice_options,
+        samples_list=samples_list,
+        input_type=input_type,
+    )
     task_count = None
     for key in env_variables:
         if task_count is not None:
-            assert task_count == len(env_variables[key]), f"Env variables not filled in consistently for all tasks" \
-                                                          f" {env_variables}"
+            assert task_count == len(env_variables[key]), (
+                f"Env variables not filled in consistently for all tasks"
+                f" {env_variables}"
+            )
         else:
             task_count = len(env_variables[key])
-    return create_script_job(batch_options=run_options, jarvice_options=jarvice_options,
-                             job_labels=job_labels, input_type=input_type,
-                             command=command, env_variables=env_variables)
+    return create_script_job(
+        run_options=run_options,
+        jarvice_options=jarvice_options,
+        job_labels=job_labels,
+        input_type=input_type,
+        command=command,
+        env_variables=env_variables,
+    )
 
 
 def task_info(dragen_options, jarvice_options, samples_list, input_type):
-    date_str = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d-%H-%M-%S')
+    date_str = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y-%m-%d-%H-%M-%S"
+    )
     replace_options = [("<date>", date_str)]
     if input_type == FASTQ_INPUT:
         # fastq files - combine all inputs in one command
@@ -259,10 +327,16 @@ def task_info(dragen_options, jarvice_options, samples_list, input_type):
 
         env_variables[INPUT_PATH] = [inputs.replace("gs://", "s3://")]
         if "--output-directory" in dragen_options:
-            env_variables[OUTPUT_PATH] = [dragen_options.get("--output-directory").replace("<date>", date_str)]
+            env_variables[OUTPUT_PATH] = [
+                dragen_options.get("--output-directory").replace("<date>", date_str)
+            ]
 
-        command = get_task_command(dragen_options=dragen_options, jarvice_options=jarvice_options,
-                                   inputs=inputs, replace_options=replace_options)
+        command = get_task_command(
+            dragen_options=dragen_options,
+            jarvice_options=jarvice_options,
+            inputs=inputs,
+            replace_options=replace_options,
+        )
 
         return command, env_variables
         # commands.append((image_uri, entrypoint, command, f",{f_uris}", output_path))
@@ -274,19 +348,28 @@ def task_info(dragen_options, jarvice_options, samples_list, input_type):
                 env_variables[SAMPLE_ID].append(sample_id)
                 env_variables[INPUT_PATH].append(sample[1].replace("gs://", "s3://"))
                 if "--output-directory" in dragen_options:
-                    env_variables[OUTPUT_PATH].append(dragen_options.get("--output-directory").
-                                                      replace("${SAMPLE_ID}", sample_id).replace("<date>", date_str))
+                    env_variables[OUTPUT_PATH].append(
+                        dragen_options.get("--output-directory")
+                        .replace("${SAMPLE_ID}", sample_id)
+                        .replace("<date>", date_str)
+                    )
             else:
-                Logger.warning(f"Loaded samples were not in the expected format {sample}")
+                Logger.warning(
+                    f"Loaded samples were not in the expected format {sample}"
+                )
         inputs = " --cram-input ${INPUT_PATH}"
-        command = get_task_command(dragen_options=dragen_options, jarvice_options=jarvice_options,
-                                   inputs=inputs, replace_options=replace_options)
+        command = get_task_command(
+            dragen_options=dragen_options,
+            jarvice_options=jarvice_options,
+            inputs=inputs,
+            replace_options=replace_options,
+        )
 
         return command, env_variables
 
     elif input_type == FASTQ_LIST_INPUT:
-        inputs = f" --fastq-list"  # TODO
-        Logger.error(f"Method Not implemented yet")
+        inputs = " --fastq-list"  # TODO
+        Logger.error("Method Not implemented yet")
     else:
         Logger.error(f"Error, unsupported input_type {input_type}")
 
@@ -323,60 +406,49 @@ def get_dragen_command(dragen_command_options, replacements=None):
 
 
 def get_task_command(dragen_options, jarvice_options, inputs, replace_options):
-    Logger.info(f"Using PROJECT_ID = {PROJECT_ID}, region = {REGION},"
-                f" job_name = {JOB_NAME}, network = {NETWORK},"
-                f" subnet = {SUBNET}, "
-                f" s3_secret_name = {S3_SECRET_NAME}, "
-                f"service_account_email = {SERVICE_ACCOUNT_EMAIL},"
-                f" machine = {MACHINE}")
+    Logger.info(
+        f"Using PROJECT_ID = {PROJECT_ID}, region = {REGION},"
+        f" job_name = {JOB_NAME}, network = {NETWORK},"
+        f" subnet = {SUBNET}, "
+        f"service_account_email = {SERVICE_ACCOUNT_EMAIL}"
+    )
 
-    jxe_app = jarvice_options.get('jxe_app', 'illumina-dragen_3_7_8n')
-    stub_script = jarvice_options.get('stub', 'jarvice-dragen-stub.sh')
+    dragen_app = jarvice_options.get("dragen_app", "illumina-dragen_3_7_8n")
+    api_host = jarvice_options.get("api_host", "https://illumina.nimbix.net/api")
+    jarvice_machine_type = jarvice_options.get("jarvice_machine_type", "nx1")
+    stub_script = jarvice_options.get("stub", None)
 
-    s3_secret_value = get_secret_value(S3_SECRET_NAME, PROJECT_ID)
-
-    Logger.info(f"s3_secret_value={s3_secret_value}")
-    access_key = s3_secret_value["access_key"]
-    access_secret = s3_secret_value["access_secret"]
-
-    Logger.info(f"access_key={access_key}, access_secret={access_secret}")
-
-    license_values = get_secret_value(LICENSE_SECRET, PROJECT_ID)
-
-    Logger.info(f"licence_secret={LICENSE_SECRET}")
-    jxe_username = license_values["jxe_username"]
-    jxe_apikey = license_values["jxe_apikey"]
-    illumina_license = license_values["illumina_license"]
-
-    assert LICENSE_SECRET, "LICENSE_SECRET unknown"
-    assert s3_secret_value, "Could not retrieve S3_SECRET name"
-    assert license_values, f"Could not retrieve {LICENSE_SECRET} name"
+    # Check secrets are valid
+    access_key = get_secret_value(S3_ACCESS_KEY_SECRET_NAME, PROJECT_ID)
+    access_secret = get_secret_value(S3_SECRET_KEY_SECRET_NAME, PROJECT_ID)
+    illumina_license = get_secret_value(ILLUMINA_LIC_SERVER_SECRET_NAME, PROJECT_ID)
+    jxe_apikey = get_secret_value(JARVICE_API_KEY_SECRET_NAME, PROJECT_ID)
+    jxe_username = get_secret_value(JARVICE_API_USERNAME_SECRET_NAME, PROJECT_ID)
     assert access_key, "Could not retrieve access_key for input bucket"
     assert access_secret, "Could not retrieve access_secret for input bucket"
+    assert illumina_license, "Could not retrieve illumina_license"
     assert jxe_username, "Could not retrieve jxe_username "
     assert jxe_apikey, "Could not retrieve jxe_apikey"
-    assert illumina_license, "Could not retrieve illumina_license"
-    print(f"access_key={access_key}, access_secret={access_secret}")
 
     dragen_options_replaced = get_dragen_command(dragen_options, replace_options)
     dragen_options_str = ""
     for key in dragen_options_replaced:
         dragen_options_str += f""" {key} {dragen_options_replaced[key]}"""
 
-    command = f"{stub_script} " \
-              f"--project {PROJECT_ID} " \
-              f"--network {NETWORK} " \
-              f"--subnet {SUBNET} " \
-              f"--username {jxe_username} " \
-              f"--apikey {jxe_apikey} " \
-              f"--dragen-app {jxe_app} " \
-              f"--s3-access-key {access_key} " \
-              f"--s3-secret-key {access_secret} " \
-              f"-- " \
-              f""" {inputs}""" \
-              f""" {dragen_options_str} """ \
-              f""" --lic-server https://{illumina_license}@license.edicogenome.com"""
-    dragen_command = DragenCommand(command)
+    command = (
+        f"--api-host "
+        f"{api_host} "
+        f"--machine "
+        f"{jarvice_machine_type} "
+        f"--dragen-app "
+        f"{dragen_app} "
+        f"--google-sa "
+        f"{SERVICE_ACCOUNT_EMAIL} "
+        f"-- "
+        f""" {inputs}"""
+        f""" {dragen_options_str} """
+    )
+    dragen_command = DragenCommand(command, stub_script)
     Logger.info(f"======== {dragen_command}")
     return dragen_command
 
@@ -391,7 +463,7 @@ def get_secret_value(secret_name, project_id):
     response = sm.access_secret_version(request={"name": secret_path})
     payload = response.payload.data.decode("UTF-8")
     Logger.info(f"payload={payload}")
-    return json.loads(payload)
+    return payload
 
 
 def get_options(config):
@@ -404,32 +476,41 @@ def get_options(config):
     return dragen_options, jarvice_options
 
 
-def create_script_job(batch_options, command: DragenCommand, jarvice_options, job_labels, env_variables, input_type):
+def create_script_job(
+    run_options,
+    command: DragenCommand,
+    jarvice_options,
+    job_labels,
+    env_variables,
+    input_type,
+):
     """
-      This method shows how to create a sample Batch Job that will run
-      a simple command on Cloud Compute instances.
+    This method shows how to create a sample Batch Job that will run
+    a simple command on Cloud Compute instances.
 
-      Returns:
-          A job object representing the job created.
-      """
+    Returns:
+        A job object representing the job created.
+    """
 
-    image_uri = jarvice_options.get('image_uri', IMAGE_URI_DEFAULT)
-    entrypoint = jarvice_options.get('entrypoint', '/bin/bash')
+    image_uri = jarvice_options.get("image_uri", IMAGE_URI_DEFAULT)
+    entrypoint = jarvice_options.get("entrypoint", "/bin/bash")
 
     # We can specify what resources are requested by each task.
     resources = batch_v1.ComputeResource()
 
     # in milliseconds per cpu-second. This means the task requires 2 whole CPUs.
-    resources.cpu_milli = batch_options.get("cpu_milli", 1000)
-    resources.memory_mib = batch_options.get("memory_mib", 512)
+    resources.cpu_milli = run_options.get("cpu_milli", 1000)
+    resources.memory_mib = run_options.get("memory_mib", 512)
+    machine = run_options.get("machine", "e2-micro")
+    parallelism = run_options.get("parallelism", 3)
 
     # Tasks are grouped inside a job using TaskGroups.
     # Currently, it's possible to have only one task group.
     group = batch_v1.TaskGroup()
-    parallelism = batch_options.get('parallelism', 3)
-
     task_count = len(env_variables[list(env_variables.keys())[0]])
-    Logger.info(f"======== Creating job with {task_count} tasks and {parallelism} to be run in parallel ========")
+    Logger.info(
+        f"======== Creating job with {task_count} tasks and {parallelism} to be run in parallel ========"
+    )
 
     task_environments = []
     if len(env_variables) > 0:
@@ -447,8 +528,8 @@ def create_script_job(batch_options, command: DragenCommand, jarvice_options, jo
     # In this case, we tell the system to use "e2-standard-4" machine type.
     # Read more about machine types here: https://cloud.google.com/compute/docs/machine-types
     policy = batch_v1.AllocationPolicy.InstancePolicy()
-    # policy.machine_type = "n1-standard-2"
-    policy.machine_type = MACHINE
+
+    policy.machine_type = machine
     instances = batch_v1.AllocationPolicy.InstancePolicyOrTemplate()
     instances.policy = policy
 
@@ -479,34 +560,48 @@ def create_script_job(batch_options, command: DragenCommand, jarvice_options, jo
     allocation_policy.service_account = service_account
 
     task_notification = batch_v1.JobNotification()
-    task_notification.pubsub_topic = f"projects/{PROJECT_ID}/topics/{PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE}"
+    task_notification.pubsub_topic = (
+        f"projects/{PROJECT_ID}/topics/{PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE}"
+    )
     message = batch_v1.JobNotification.Message()
     message.type_ = task_notification.Type.TASK_STATE_CHANGED
     task_notification.message = message
 
     job_notification = batch_v1.JobNotification()
-    job_notification.pubsub_topic = f"projects/{PROJECT_ID}/topics/{PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE}"
+    job_notification.pubsub_topic = (
+        f"projects/{PROJECT_ID}/topics/{PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE}"
+    )
     message = batch_v1.JobNotification.Message()
     message.type_ = job_notification.Type.JOB_STATE_CHANGED
     job_notification.message = message
 
-    job_name = f"{JOB_NAME}-{uuid.uuid4().hex}"
+    job_name = f"{JOB_NAME}-{uuid.uuid4().hex[:10]}"
     # Define what will be done as part of the job.
     runnable = batch_v1.Runnable()
     runnable.container = batch_v1.Runnable.Container()
 
     runnable.container.image_uri = image_uri
     runnable.container.entrypoint = entrypoint
-    runnable.container.commands = ["-c", command.script]
+    runnable.container.commands = command.get_commands()
+
+    environment = batch_v1.Environment()
+    environment.secret_variables = {
+        "ILLUMINA_LIC_SERVER": f"projects/{PROJECT_ID}/secrets/{ILLUMINA_LIC_SERVER_SECRET_NAME}/versions/latest",
+        "JARVICE_API_KEY": f"projects/{PROJECT_ID}/secrets/{JARVICE_API_KEY_SECRET_NAME}/versions/latest",
+        "JARVICE_API_USER": f"projects/{PROJECT_ID}/secrets/{JARVICE_API_USERNAME_SECRET_NAME}/versions/latest",
+        "S3_ACCESS_KEY": f"projects/{PROJECT_ID}/secrets/{S3_ACCESS_KEY_SECRET_NAME}/versions/latest",
+        "S3_SECRET_KEY": f"projects/{PROJECT_ID}/secrets/{S3_SECRET_KEY_SECRET_NAME}/versions/latest",
+    }
+    # runnable.environment = environment
 
     # Define what will be done as part of the job.
     task = batch_v1.TaskSpec()
     task.compute_resource = resources
 
-    task.max_retry_count = batch_options.get('max_retry_count', 2)
-    task.max_run_duration = batch_options.get('max_run_duration', "7200s")
+    task.max_retry_count = run_options.get("max_retry_count", 2)
+    task.max_run_duration = run_options.get("max_run_duration", "7200s")
     task.runnables = [runnable]
-
+    task.environment = environment
     group.task_spec = task
 
     job = batch_v1.Job()
@@ -544,45 +639,71 @@ def create_script_job(batch_options, command: DragenCommand, jarvice_options, jo
 
         if OUTPUT_PATH in env_variables:
             output_path = env_variables[OUTPUT_PATH][i]
-        stream_data_to_bq(created_job.uid, sample_id, command, input_path, input_type, output_path,
-                          i, task_environments, created_job.labels[JOB_LABEL_NAME])
+        stream_data_to_bq(
+            created_job.uid,
+            sample_id,
+            command,
+            input_path,
+            input_type,
+            output_path,
+            i,
+            task_environments,
+            created_job.labels[JOB_LABEL_NAME],
+        )
 
     write_job_csv(JOBS_INFO_PATH, created_job, command, task_environments, input_type)
 
 
-def stream_data_to_bq(job_id, sample_id, command, input_path, input_type, output_path, index,
-                      task_environments, label):
+def stream_data_to_bq(
+    job_id,
+    sample_id,
+    command,
+    input_path,
+    input_type,
+    output_path,
+    index,
+    task_environments,
+    label,
+):
     now = datetime.datetime.now(datetime.timezone.utc)
-    errors = stream_tasks_to_bigquery([
-        {
-            "job_id": job_id,
-            "job_label": label,
-            "task_id": "",
-            "sample_id": sample_id,
-            "status": TASK_SCHEDULED,
-            "input_type": input_type,
-            "input_path": input_path,
-            "output_path": magic_replace(output_path, index, task_environments),
-            "command": magic_replace(command, index, task_environments),
-            "timestamp": now.strftime('%Y-%m-%d %H:%M:%S')
-        }
-
-    ])
+    errors = stream_tasks_to_bigquery(
+        [
+            {
+                "job_id": job_id,
+                "job_label": label,
+                "task_id": "",
+                "sample_id": sample_id,
+                "status": TASK_SCHEDULED,
+                "input_type": input_type,
+                "input_path": input_path,
+                "output_path": magic_replace(output_path, index, task_environments),
+                "command": magic_replace(command, index, task_environments),
+                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        ]
+    )
     if not errors:
         Logger.info(f"New rows have been added for job_id {job_id} ")
     elif isinstance(errors, list):
         error = errors[0].get("errors")
-        Logger.error(f"Encountered errors while inserting rows for job_id {job_id}: {error}")
+        Logger.error(
+            f"Encountered errors while inserting rows for job_id {job_id}: {error}"
+        )
 
 
 def magic_replace(input_str, batch_task_index, task_environments):
     input_str = str(input_str)
-    input_str = input_str.replace("${BATCH_TASK_INDEX}", str(batch_task_index)).replace("$BATCH_TASK_INDEX",
-                                                                                        str(batch_task_index))
+    input_str = input_str.replace("${BATCH_TASK_INDEX}", str(batch_task_index)).replace(
+        "$BATCH_TASK_INDEX", str(batch_task_index)
+    )
 
     for key in task_environments[batch_task_index].variables:
-        input_str = input_str.replace("${" + key + "}", task_environments[batch_task_index].variables[key])
-        input_str = input_str.replace(key, task_environments[batch_task_index].variables[key])
+        input_str = input_str.replace(
+            "${" + key + "}", task_environments[batch_task_index].variables[key]
+        )
+        input_str = input_str.replace(
+            key, task_environments[batch_task_index].variables[key]
+        )
     return input_str
 
 
@@ -594,11 +715,26 @@ def write_job_csv(dir_path, created_job, command, task_environments, input_type)
         csv_str = ""
         for index, t in enumerate(task_environments):
             if header:
-                csv_str = f"{BATCH_TASK_INDEX}," + ",".join(t.variables.keys()) + f",{INPUT_TYPE},{COMMAND}" + "\n"
+                csv_str = (
+                    f"{BATCH_TASK_INDEX},"
+                    + ",".join(t.variables.keys())
+                    + f",{INPUT_TYPE},{COMMAND}"
+                    + "\n"
+                )
                 header = False
             command = magic_replace(command, index, task_environments)
-            csv_str += magic_replace(",".join([str(index)] + list(t.variables.values()) + [input_type, command]),
-                                     index, task_environments) + "\n"
+            csv_str += (
+                magic_replace(
+                    ",".join(
+                        [str(index)]
+                        + list(t.variables.values())
+                        + [input_type, command]
+                    ),
+                    index,
+                    task_environments,
+                )
+                + "\n"
+            )
 
         bucket = gcs.get_bucket(bucket_name)
         if path == "":
@@ -607,10 +743,7 @@ def write_job_csv(dir_path, created_job, command, task_environments, input_type)
             f_name = f"{path}/{job_uid}.csv"
         blob = bucket.blob(f"{f_name}")
         Logger.info(f"Uploading status information into gs://{bucket.name}/{f_name}")
-        blob.upload_from_string(
-            data=csv_str,
-            content_type='text/csv'
-        )
+        blob.upload_from_string(data=csv_str, content_type="text/csv")
 
 
 def get_args():
@@ -624,10 +757,14 @@ def get_args():
       Examples:
 
       python main.py -in=gs://path-to/job_list.csv  -out=gs://path-to/summary.csv
-      """)
+      """,
+    )
 
-    args_parser.add_argument('-d', dest="dir_path",
-                             help="Path to input gcs directory where START_PIPELINE file to be uploaded")
+    args_parser.add_argument(
+        "-d",
+        dest="dir_path",
+        help="Path to input gcs directory where START_PIPELINE file to be uploaded",
+    )
     return args_parser
 
 
@@ -641,8 +778,12 @@ if __name__ == "__main__":
     if args_dir_path:
         name = f"{args_dir_path}/START_PIPELINE"
 
-    args_bucket_name = f'{PROJECT_ID}-trigger'
+    args_bucket_name = f"{PROJECT_ID}-trigger"
     Logger.info(f"Using file_name={name}, bucket={args_bucket_name}")
-    run_dragen_job({'bucket': args_bucket_name,
-                    'name': name,
-                    }, None)
+    run_dragen_job(
+        {
+            "bucket": args_bucket_name,
+            "name": name,
+        },
+        None,
+    )

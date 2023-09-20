@@ -26,7 +26,9 @@ assert BIGQUERY_DB_TASKS, "BIGQUERY_DB_TASKS is not set"
 
 def stream_tasks_to_bigquery(rows_to_insert: List[Dict]):
     table_id = f"{PROJECT_ID}.{BIGQUERY_DB_TASKS}"
-    Logger.info(f"stream_tasks_to_bigquery table_id={table_id}, rows_to_insert={rows_to_insert}")
+    Logger.info(
+        f"stream_tasks_to_bigquery table_id={table_id}, rows_to_insert={rows_to_insert}"
+    )
 
     errors = bigquery_client.insert_rows_json(table_id, rows_to_insert)
 
