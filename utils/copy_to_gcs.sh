@@ -5,7 +5,7 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/SET
+source "${DIR}"/../setup/init_env_vars.sh
 
 echo "uploading sample data to GCS. THis will take a while..."
 

@@ -15,7 +15,7 @@
 
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$WDIR/print"
-source "${WDIR}/../SET"
+source "${WDIR}/../setup/init_env_vars.sh"
 
 $printf "Setting up Job Configuration files ..."
 function substitute(){
@@ -57,6 +57,7 @@ echo "Preparing config files"
 "${WDIR}/create_input_list.sh" -s 20 -c 22 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/20_21_samples.txt
 "${WDIR}/create_input_list.sh" -s 22 -c 23 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/22_samples.txt
 "${WDIR}/create_input_list.sh" -c 100 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/100_samples.txt
+"${WDIR}/create_input_list.sh" -c 10000 -o gs://"${INPUT_BUCKET_NAME}"/cram/input_list/10K_samples.txt
 
 "${WDIR}"/prepare_input.sh
 

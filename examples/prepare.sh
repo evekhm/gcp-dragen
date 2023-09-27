@@ -1,6 +1,6 @@
 #!/bin/bash
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${WDIR}"/../SET
+source "${WDIR}"/../setup/init_env_vars.sh
 
 cat > env.sh <<EOF
 NAME="dragen-job"

@@ -15,7 +15,7 @@
 
 CDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$CDIR/../utils/print"
-source "${CDIR}"/../SET
+source "${CDIR}"/init_env_vars.sh  > /dev/null 2>&1
 
 function build_common_package(){
   exists=$(gcloud artifacts repositories describe --location="${GCLOUD_REGION}" "${ARTIFACTS_REPO}" 2> /dev/null)
@@ -67,9 +67,9 @@ function build_common_package(){
 
   # gcloud auth application-default login
   #gcloud artifacts print-settings python \
-  #>     --project=dragen-ek-3 \
-  #>     --repository=python-repo \
-  #>     --location=us-central1
+  #>     --project=$PROJECT_ID \
+  #>     --repository=${ARTIFACTS_REPO} \
+  #>     --location=${GCLOUD_REGION}
 }
 
 build_common_package

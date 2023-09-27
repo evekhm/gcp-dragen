@@ -14,7 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../SET"
+source "$DIR/../setup/init_env_vars.sh"
 
 SCRIPT=$1
 

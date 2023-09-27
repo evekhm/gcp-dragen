@@ -16,7 +16,7 @@
 
 date_str=$(date +%s )
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/../SET
+source "${DIR}"/../setup/init_env_vars.sh
 JOB_NAME_UID="projects/${PROJECT_ID}/locations/${GCLOUD_REGION}/jobs/test-batch-${date_str}"
 echo "Submitting $JOB_NAME_UID"
 gcloud beta batch jobs submit "$JOB_NAME_UID" --network="projects/$PROJECT_ID/global/networks/$GCLOUD_NETWORK" --subnetwork="projects/$PROJECT_ID/regions/${GCLOUD_REGION}/subnetworks/$GCLOUD_SUBNET" --config - <<EOD

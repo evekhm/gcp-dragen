@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../SET" > /dev/null 2>&1
+source "$DIR/../setup/init_env_vars.sh" > /dev/null 2>&1
 
 SCRIPT=$1
 SAMPLE_ID=$2

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../SET"  > /dev/null 2>&1
+source "$DIR/../setup/init_env_vars.sh"  > /dev/null 2>&1
 
 PARALLEL=10
 BATCH_SIZE=20
@@ -24,7 +24,7 @@ INPUT_22="gs://$INPUT_BUCKET_NAME/cram/input_list/22_samples.txt"
 
 export DEBUG=true
 
-python "${DIR}/prepare_input/main.py" -p $PARALLEL -b $BATCH_SIZE \
+python3 "${DIR}/prepare_input/main.py" -p $PARALLEL -b $BATCH_SIZE \
   -c gs://$CONFIG_BUCKET_NAME/dryrun_config_ok.json -s ${INPUT_20} \
   -c gs://$CONFIG_BUCKET_NAME/dryrun_config_pass.json -s  ${INPUT_21} \
   -c gs://$CONFIG_BUCKET_NAME/dryrun_config_fail.json -s  ${INPUT_22} \

@@ -462,7 +462,6 @@ def get_secret_value(secret_name, project_id):
     Logger.info(f"Getting secret for {secret_path}")
     response = sm.access_secret_version(request={"name": secret_path})
     payload = response.payload.data.decode("UTF-8")
-    Logger.info(f"payload={payload}")
     return payload
 
 

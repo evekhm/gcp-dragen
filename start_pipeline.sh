@@ -15,7 +15,7 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PWD=$(pwd)
-source "$DIR/SET"
+source "$DIR/setup/init_env_vars.sh"
 
 FOLDER=$1
 if [ -z "$FOLDER" ]; then

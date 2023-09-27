@@ -1,6 +1,6 @@
 #!/bin/bash
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${WDIR}"/../SET
+source "${WDIR}"/../setup/init_env_vars.sh
 "${WDIR}"/prepare.sh
 
 JARVICE_API_URL="https://illumina.nimbix.net/api"

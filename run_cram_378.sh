@@ -19,6 +19,6 @@ if [ -z "$PROJECT_ID" ]; then
   echo "Setting PROJECT_ID using DEVSHELL_PROJECT_ID=$DEVSHELL_PROJECT_ID"
   export PROJECT_ID=$DEVSHELL_PROJECT_ID
 fi
-source "${DIR}"/SET
+source "${DIR}/setup/init_env_vars.sh"
 
 gsutil cp "${START_PIPELINE_FILE}" gs://"${INPUT_BUCKET_NAME}/cram/378/"

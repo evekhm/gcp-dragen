@@ -166,7 +166,7 @@ def get_log_entries(job_uid: str, task_id: str, payload_patterns: List[str]):
 
 
 def is_dragen_success_check_logging(job_uid: str, task_id: str):
-    log_entries = get_log_entries(job_uid, task_id, DRAGEN_SUCCESS_ENTRIES)
+    log_entries, pattern = get_log_entries(job_uid, task_id, DRAGEN_SUCCESS_ENTRIES)
     if log_entries and len(log_entries) > 0:
         return True
     return False
@@ -331,12 +331,14 @@ if __name__ == "__main__":
     get_status(
         {
             "attributes": {
-                "JobUID": "dragen-job-2f2440c-34be57a5-bb2a-42f70",
+                "JobUID": "job-dragen-ae0e459-1866e3ae-c20b-4ce50",
                 "NewTaskState": "SUCCEEDED",
+                "TaskName": "projects/593129167048/locations/us-central1/jobs/job-dragen-ae0e459505/taskGroups/group0/tasks/0",
                 "Region": "us-central1",
-                "TaskUID": "dragen-job-2f2440c-34be57a5-bb2a-42f70-group0-0",
+                "TaskUID": "job-dragen-ae0e459-1866e3ae-c20b-4ce50-group0-0",
+                "Type": 'TASK_STATE_CHANGED'
             },
-            "data": "VGFzayBzdGF0ZSB3YXMgdXBkYXRlZDogdGFza1VJRD1kcmFnZW4tam9iLTJmMjQ0MGMtMzRiZTU3YTUtYmIyYS00MmY3MC1ncm91cDAtMCwgcHJldmlvdXNTdGF0ZT1SVU5OSU5HLCBjdXJyZW50U3RhdGU9U1VDQ0VFREVELCB0aW1lc3RhbXA9MjAyMy0wOS0yMFQxMDo1ODozMC0wNzowMA==",
+            "data": "VGFzayBzdGF0ZSB3YXMgdXBkYXRlZDogdGFza1VJRD1qb2ItZHJhZ2VuLWFlMGU0NTktMTg2NmUzYWUtYzIwYi00Y2U1MC1ncm91cDAtMCwgcHJldmlvdXNTdGF0ZT1QRU5ESU5HLCBjdXJyZW50U3RhdGU9U1VDQ0VFREVELCB0aW1lc3RhbXA9MjAyMy0wOS0yNlQxNzozNjo0MS0wNzowMA=='",
         },
         None,
     )

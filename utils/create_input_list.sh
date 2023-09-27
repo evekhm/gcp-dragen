@@ -14,7 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/../SET  > /dev/null 2>&1
+source "${DIR}"/../setup/init_env_vars.sh  > /dev/null 2>&1
 
 # get parameters
 while getopts c:s:o: flag
@@ -23,12 +23,15 @@ do
     c) END_COUNT=${OPTARG};;
     s) START_COUNT=${OPTARG};;
     o) OUTPUT=${OPTARG};;
+    *) usage;;
   esac
 done
 
 usage(){
-  echo "Usage:"
-  echo "create_input_list.sh [-s START_COUNT] -c END_COUNT -o OUTPUT_GCS_URI"
+  echo "Usage: $0
+  [-s START_COUNT]
+  -c END_COUNT
+  -o OUTPUT_GCS_URI"
   echo "Example: create_input_list.sh -s 50 -c 100 -o gs://$PROJECT_ID-trigger/cram/test/samples.txt"
   exit
 }

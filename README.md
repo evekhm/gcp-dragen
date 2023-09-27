@@ -1,9 +1,19 @@
 <!-- TOC -->
   * [Introduction](#introduction)
+    * [Slides](#slides)
+    * [Overview](#overview)
   * [Pre-requisites](#pre-requisites)
-    * [License Information](#license-information)
-    * [Infrastructure Preparation](#infrastructure-preparation)
-  * [GCP Setup](#gcp-setup)
+    * [License](#license)
+    * [Used APIs](#used-apis)
+  * [Infrastructure Setup](#infrastructure-setup)
+    * [Google Cloud Project Setup](#google-cloud-project-setup)
+    * [Modify Org Policy Constraints](#modify-org-policy-constraints)
+    * [Quick Start - Setup All](#quick-start---setup-all)
+    * [Step-by-Step Guide](#step-by-step-guide)
+      * [Setup Terraform](#setup-terraform)
+      * [Init and Apply Terraform](#init-and-apply-terraform)
+      * [Deploy Cloud Functions and Python Package](#deploy-cloud-functions-and-python-package)
+  * [Test Data](#test-data)
   * [Demo Flows](#demo-flows)
     * [Smoke Test](#smoke-test)
       * [Trigger the Pipeline](#trigger-the-pipeline)
@@ -19,25 +29,22 @@
     * [get_status](#getstatus)
     * [job_scheduler](#jobscheduler)
   * [Pipeline flow](#pipeline-flow)
-  * [Troubleshooting](#troubleshooting)
-    * [Exhausting ssh login profile](#exhausting-ssh-login-profile)
-      * [Error](#error)
-      * [Resolution](#resolution)
-  * [Supported versions](#supported-versions)
+  * [Supported DRAGEN versions](#supported-dragen-versions)
   * [References](#references)
   * [Loading batch Job details](#loading-batch-job-details)
-  * [Sharing Code](#sharing-code)
 <!-- TOC -->
 ## Introduction
 
 This is a solution using GCP Cloud Storage -> Pub/Sub -> Cloud Function -> Batch API to trigger execution of the Dragen Software on FPGA dedicated hardware.
 It is built around implementation of the  [Illumina DRAGEN batch engine](https://github.com/nimbix/jarvice-dragen-batch/blob/maste).
 
-It offers a simplified user experience:
-
-- Easy provisioning of the infrastructure,
+Offers a simplified user experience with enhanced features sucha as:
+- Easy provisioning of the whole infrastructure (using Terraform and Cloud Build),
 - Easy way to trigger pipeline execution, by dropping an empty file called START_PIPELINE into the Cloud Storage bucket with required configuration data.
-- Monitoring tools for the sample processing progress using BigQuery.
+- Possibility to schedule execution of thousands of samples and define how many of them should be executed in parallel (using GCP Batch).
+- Easy way to configure and customize job execution (setting up DRAGEN software version and other DRAGEN run  parameters).
+- Monitoring tools for the sample processing progress using BigQuery (an overview of the completed tasks with completion statuses).
+- Notifications on Batch Job and Task status changes.
 
 ### Slides
 
@@ -50,20 +57,103 @@ It offers a simplified user experience:
 
 ![](docs/Batch_01.png)
 
+  
 ## Pre-requisites
 
-### License Information
+### License
 
 Following licenses and keys are required to operate this solution:
 
 - Illumina: Obtain a DRAGEN license key from Illumina.
 - JARVICE: Obtain a JARVICE username and API key from Eviden/Nimbix.
   > If you do not have a JARVICE username and API key for the Atos FPGA Acceleration for Illumina DRAGEN Bio-IT Platform solution, please contact support@nimbix.net.
+  
 
-### Infrastructure Preparation
+### Used APIs
+Following Google APIs will be used by the Project:
 
-In case you do not have org level admin access to modify Policy Constraints, make sure the following policies are disabled for your GCP project or request your admin to do so.
-If you have Org Level admin access, this could be done programmatically when setting up the system:
+- The follow APIs will be used:
+    #### Part of Preparation Steps
+    - orgpolicy.googleapis.com
+    - iamcredentials.googleapis.com
+    - serviceusage.googleapis.com
+    - cloudresourcemanager.googleapis.com
+    - iam.googleapis.com
+    #### Done Via Terraform
+    - pubsub.googleapis.com
+    - artifactregistry.googleapis.com
+    - bigquery.googleapis.com
+    - cloudbuild.googleapis.com
+    - compute.googleapis.com
+    - cloudresourcemanager.googleapis.com
+    - iam.googleapis.com
+    - logging.googleapis.com
+    - batch.googleapis.com
+    - secretmanager.googleapis.com
+    - cloudfunctions.googleapis.com
+    - storage.googleapis.com
+
+
+## Infrastructure Setup
+
+### Google Cloud Project Setup
+
+> It is recommended to start with a brand new Google Cloud project to have a clean start.
+
+- Create GCP Project with attached Billing Account
+- Clone this Repository using Cloud Shell:
+```shell
+git clone git@github.com:evekhm/illumnia.git  
+cd illumnia
+```
+
+[//]: # (```shell)
+
+[//]: # (gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr)
+
+[//]: # (cd evekhm-broad-dragen)
+
+[//]: # (git checkout main)
+
+[//]: # (```)
+
+Run the following commands:
+
+```shell
+export PROJECT_ID=
+gcloud config set project "${PROJECT_ID}" --quiet
+```
+
+[//]: # (```shell)
+
+[//]: # (gcloud config set project "${PROJECT_ID}" --quiet)
+
+[//]: # (gcloud services enable cloudresourcemanager.googleapis.com)
+
+[//]: # ()
+[//]: # (# for Terraform to able to run gcloud with correct config.)
+
+[//]: # (gcloud auth login)
+
+[//]: # (gcloud auth application-default login )
+
+[//]: # (gcloud auth application-default set-quota-project $PROJECT_ID)
+
+[//]: # (```)
+
+~~~~Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`):
+> ILLUMINA_LICENSE should be in the format: _https://YOUR_LICENSE_SECRET_KEY@license.edicogenome.com_
+
+```shell
+  export ILLUMINA_LICENSE=
+  export JXE_APIKEY=
+  export JXE_USERNAME=
+```
+
+
+### Modify Org Policy Constraints
+
+Following organization policies need to be modified:
 
 | Policy Name                          | Constraint Name                                  | Effective Polciy |
 | ------------------------------------ | ------------------------------------------------ | ---------------- |
@@ -72,97 +162,76 @@ If you have Org Level admin access, this could be done programmatically when set
 | Allow list for External IP address   | constraints/compute.vmExternalIpAccess           | Not Enforced     |
 | Require ShieldedVm                   | constraints/compute.requireShieldedVm            | Not Enforced     |
 | Restrict authentication types        | constraints/storage.restrictAuthTypes            | Not Enforced     |
+| Allow trusted images | constraints/compute.trustedImageProjects| Not Enforced|
 
-For `Restrict authentication types` - either should _AllowAll_ or following projects need to be added:
+Also, you need to either set `AllowAll` for `Allow trusted images` constraint (`constraints/compute.
+trustedImageProjects`) or add following projects to the Allowed list:
 
 - `projects/illumina-dragen`
 - `projects/atos-illumina-public`
 - `projects/batch-custom-image`
 
-Following Google APIs will be used by the Project:
 
-- The follow APIs will be used:
-  - orgpolicy.googleapis.com
-  - compute.googleapis.com
-  - pubsub.googleapis.com
-  - batch.googleapis.com
-  - cloudresourcemanager.googleapis.com
-  - secretmanager.googleapis.com
-  - logging.googleapis.com
-  - storage.googleapis.com
-  - cloudfunctions.googleapis.com
-  - cloudbuild.googleapis.com
-  - cloudresourcemanager.googleapis.com
-  - bigquery.googleapis.com
-  - iam.googleapis.com
+For updating all of the above organization policies you will need to have organization level admin rights.
+Updating could be done either:
+- Manually via [GCP Console](https://console.cloud.google.com/iam-admin/orgpolicies) or
+- By running the following script (you will need to have organization level Admin rights):
 
-## GCP Setup
+    ```shell
+    bash setup/update_gcp_org_policies.sh
+    ```
+- Or as an option `-d` when following Quick Start method described below.
 
-- Create GCP Project
-- Clone this Repository using Cloud Shell:
+### Quick Start - Setup All
+As a quick start, you could run the follow script to do all the installations:
 
 ```shell
-gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr
-cd evekhm-broad-dragen
-git checkout main
+bash setup/setup_all.sh [-a] [-d]
 ```
 
-- Set env variable for GCP PROJECT:
+Options:
+```text
+-a - Auto-Approves Terraform Apply State Changes (by default - requires user confirmation)
+-d - Disables required organization policies  (by default - skips this step)
+```
+
+### Step-by-Step Guide
+
+Alternatively, you could do everything step by step by running following scripts.
+
+#### Setup Terraform
 
 ```shell
-export PROJECT_ID=
+bash setup/setup_terraform.sh
 ```
 
-- Point to the Cloud Storage Bucket containing Samples Data (should be in the same Project), in case it already exists within the project:
+#### Init and Apply Terraform
+
 
 ```shell
-  export DATA_BUCKET_NAME=<replace with bucket name>
+bash setup/init_foundation.sh
 ```
 
-- If such bucket with data does not exist, you can use sample data for the Smoke Test:
-  > You will need to request access for the [GCS bucket](https://pantheon.corp.google.com/storage/browser/broad-gp-dragen-demo)
+#### Deploy Cloud Functions and Python Package
 
+```shell
+bash setup/deploy.sh
+```
+
+## Test Data
+
+For the 3.7.8 CRAM SMoke Test, you will need Samples Data (~90GiB).
+
+For the Broad (Requires access storage viewer access for the [GCS bucket](https://pantheon.corp.google.com/storage/browser/broad-gp-dragen-demo)):
+
+```shell
+  export SRC_DATA_BUCKET_NAME=broad-gp-dragen-demo
+```
 ```shell
   export DATA_BUCKET_NAME=$PROJECT_ID-data
-  gcloud storage buckets create gs://$DATA_BUCKET_NAME --project=$PROJECT_ID
-  gsutil -m cp -r gs://broad-gp-dragen-demo/References gs://$DATA_BUCKET_NAME/
-  gsutil -m cp -r gs://broad-gp-dragen-demo/NA12878  gs://$DATA_BUCKET_NAME/
+  gsutil -m cp -r gs://${SRC_DATA_BUCKET_NAME}/References gs://$DATA_BUCKET_NAME/
+  gsutil -m cp -r gs://${SRC_DATA_BUCKET_NAME}/NA12878  gs://$DATA_BUCKET_NAME/
 ```
-
-- Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`):
-
-```shell
-  export ILLUMINA_LICENSE=
-  export JXE_APIKEY=
-  export JXE_USERNAME=
-```
-
-- At this point you either have manually followed the pre-requisites to verify required disabled policy constraints, or you have org level admin rights and this could be done for you, when following variable is set:
-
-```shell
-export DISABLE_POLICY=true
-```
-
-- Run following command to provision required infrastructure (Org policies, VPC, GCP Buckets, HMAC keys):
-
-```shell
-./setup.sh
-```
-
-> Command will take ~ 8 minutes, and you should see following message at the end of the execution: ` "Success! Infrastructure deployed and ready!"` with next steps described.
-
-This command executes following steps:
-
-- Enables required APIs
-- Sets required constraints
-- Creates Network/Subnet and required Firewall rules
-- Creates GCS Bucket for input and output
-- Creates HMAC keys (stores as GCP secrets)
-- Creates Secrets with License keys (stores as GCP secrets)
-- Creates Service Account with required permissions to run the Batch Job
-- Uploads sample config files with batch, Jarvice and Dragen options
-- Deploys Cloud Function - to trigger batch Job on GCS event
-
 ## Demo Flows
 
 ### Smoke Test
@@ -276,10 +345,16 @@ Trigger execution of the jobs:
 > ./run_test_jobs.sh
 ```
 
+The Pipeline wills schedule following execution:
+- Will scheduler to run 20 tasks  (Verified OK)
+- Upon completion wills schedule 2 tasks  (Verified Fail)
+- Upon completion wills schedule 1 Failing task
+
+
 The script will:
 `gs://$PROJECT_ID-trigger/test/jobs.csv`
 
-Check [Cloud Console Batch](https://console.cloud.google.com/batch/jobs) for the Progress
+Check [Cloud Console Batch](https://console.cloud.google.com/batch/jobs) for the Progress.
 
 Do the sample quires:
 
@@ -399,7 +474,7 @@ Done! Generated:
 
 > You can use utility by providing input parameters directly:
 > ```shell
-> python utils/prepare_input/main.py -h
+> python3 utils/prepare_input/main.py -h
 > ```
 > Helper output:
 > ```text
@@ -409,7 +484,7 @@ Done! Generated:
 >      Script to prepare configuration to run Dragen jobs.
 >      
 >
-> optional arguments:
+> Arguments:
 >  -h, --help            show this help message and exit
 >  -p PARALLELISM        how many tasks to run in parallel per single job
 >  -b BATCH_SIZE         how many tasks in total in a single job (job runs non-stop till completion)
@@ -422,7 +497,7 @@ Done! Generated:
 >      python main.py -p 14 -b 320 -c gs://$PROJECT_ID-config/cram_config_378.json 
 >                -o gs://$PROJECT_ID-trigger/10K_3_7_8 -s gs://$PROJECT_ID-trigger/cram/input_list/10K_samples.txt
 >```
-
+~~~~
 Trigger the pipeline:
 
 ```shell
@@ -543,29 +618,8 @@ Sample scripts to trigger for execution (to be run from the Cloud Shell):
 - ./run_test_batch.sh pass - to trigger 3.78 dry run sample test (pass 2 samples, verified_fail)
 
 
-## Troubleshooting
 
-### Exhausting ssh login profile
-
-#### Error
-
-```shell
-ERROR: (gcloud.compute.ssh) INVALID_ARGUMENT: Login profile size exceeds 32 KiB. Delete profile values to make additional space.
-```
-
-![](docs/error.png)
-
-#### Resolution
-
-Clean up service account ssh keys:
-
-```shell
-./utils/cleanup_keys.sh
-```
-
-The command above will activate service account and clean up its keys.
-
-## Supported versions
+## Supported DRAGEN versions
 
 Following dragen `VERSION`(s) are supported:
 
@@ -601,31 +655,51 @@ Following dragen `VERSION`(s) are supported:
 gcloud batch jobs describe --location us-central1 <JOB_NAME>
 ```
 
-## Sharing Code
+[//]: # (## Sharing Code)
 
-Configure the repo access control so customer can view or download it:
+[//]: # ()
+[//]: # (Configure the repo access control so customer can view or download it:)
 
-- Go to [cloud-ce-shared-csr project](https://source.cloud.google.com/cloud-ce-shared-csr?project=cloud-ce-shared-cs) in Cloud Source Repos
-- Select [this repository](https://source.cloud.google.com/cloud-ce-shared-csr/evekhm-broad-dragen)
-- Select the settings icon (top right)
-- Select Permissions
-- In the Members box, add one or more customer's email address (They need to have a google account)
-- Set Role to: Source repository-->Source Repository Reader
-- Click Add
+[//]: # ()
+[//]: # (- Go to [cloud-ce-shared-csr project]&#40;https://source.cloud.google.com/cloud-ce-shared-csr?project=cloud-ce-shared-cs&#41; in Cloud Source Repos)
 
-Your Customer can now clone the repository in their own environment. Provide the following instructions to the customer:
+[//]: # (- Select [this repository]&#40;https://source.cloud.google.com/cloud-ce-shared-csr/evekhm-broad-dragen&#41;)
 
-- Install the [Google Cloud SDK](https://cloud.google.com/sdk)
-- Authenticate the SDK with their Google credentials
+[//]: # (- Select the settings icon &#40;top right&#41;)
 
-```shell
-gcloud init
-```
+[//]: # (- Select Permissions)
 
-- Clone the repository (replace USERNAME-project-name with your repo name)
+[//]: # (- In the Members box, add one or more customer's email address &#40;They need to have a google account&#41;)
 
-```shell
-gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr
-cd evekhm-broad-dragen
-git checkout main
-```
+[//]: # (- Set Role to: Source repository-->Source Repository Reader)
+
+[//]: # (- Click Add)
+
+[//]: # ()
+[//]: # (Your Customer can now clone the repository in their own environment. Provide the following instructions to the customer:)
+
+[//]: # ()
+[//]: # (- Install the [Google Cloud SDK]&#40;https://cloud.google.com/sdk&#41;)
+
+[//]: # (- Authenticate the SDK with their Google credentials)
+
+[//]: # ()
+[//]: # (```shell)
+
+[//]: # (gcloud init)
+
+[//]: # (```)
+
+[//]: # ()
+[//]: # (- Clone the repository &#40;replace USERNAME-project-name with your repo name&#41;)
+
+[//]: # ()
+[//]: # (```shell)
+
+[//]: # (gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr)
+
+[//]: # (cd evekhm-broad-dragen)
+
+[//]: # (git checkout main)
+
+[//]: # (```)

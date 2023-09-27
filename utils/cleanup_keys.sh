@@ -14,7 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/../SET
+source "${DIR}"/../setup/init_env_vars.sh
 
 echo "Creating Service Account Key for ${JOB_SERVICE_ACCOUNT}"
 export KEY=${PROJECT_ID}_${SA_JOB_NAME}.json

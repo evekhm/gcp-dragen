@@ -16,7 +16,7 @@
 
 set -e # Exit if error is detected during pipeline execution => terraform failing
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}"/SET
+source "${DIR}/setup/init_env_vars.sh"
 
 SCRIPT=$1
 

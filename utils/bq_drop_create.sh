@@ -17,7 +17,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="${DIR}/print"
 $printf "Cleaning up BQ..."
 
-source "${DIR}/../SET"
+source "${DIR}/../setup/init_env_vars.sh"
 
 if [[ -z "${PROJECT_ID}" ]]; then
   echo PROJECT_ID variable is not set. | tee -a "$LOG"

@@ -34,7 +34,7 @@ fi
 
 gcloud config set project $PROJECT_ID
 
-source "${DIR}"/SET
+source "${DIR}/setup/init_env_vars.sh"
 
 ### Functions
 function create_secret(){
@@ -104,7 +104,6 @@ function create_bq_dt(){
      "${PROJECT_ID}:${DATASET}.${TASK_STATUS_TABLE_ID}" > /dev/null 2>&1
  }
 
-
 function disable_org_policy_constraints(){
   $printf "Setting Policy Constraints..."  | tee -a "$LOG"
   gcloud org-policies reset constraints/iam.disableServiceAccountCreation --project=$PROJECT_ID
@@ -160,6 +159,7 @@ function setup_secrets(){
       echo JXE_USERNAME variable is not set. | tee -a "$LOG"
       exit
     fi
+
     $printf "Creating $LICENSE_SECRET secret..."  | tee -a "$LOG"
     [ ! -d "$DIR/tmp" ] && mkdir "$DIR/tmp"
     echo "{\"illumina_license\": \"${ILLUMINA_LICENSE}\",  \"jxe_apikey\": \"${JXE_APIKEY}\" , \"jxe_username\" : \"${JXE_USERNAME}\" }" > tmp/licsecret.json
@@ -326,7 +326,6 @@ $printf "Enabling Required APIs..."  | tee -a "$LOG"
   APIS="compute.googleapis.com \
     pubsub.googleapis.com \
     batch.googleapis.com \
-    cloudresourcemanager.googleapis.com \
     secretmanager.googleapis.com \
     logging.googleapis.com \
     storage.googleapis.com \
@@ -372,17 +371,8 @@ create_pubsub_topic "$PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE"
 create_pubsub_topic "$PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE"
 
 
-bash "${DIR}/setup/build_package.sh" | tee -a "$LOG"
+bash -e "${DIR}"/setup/deploy.sh | tee -a "$LOG"
 
-bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
-
-bash -e "${DIR}"/deploy.sh | tee -a "$LOG"
-
-
-# preparing for test data
-gsutil cp "${DIR}/tests/jobs_created/*" "$JOBS_INFO_PATH/"
-
-$printf "Success! Infrastructure deployed and ready!"  | tee -a "$LOG"
 
 echo " > Start the pipeline: "  | tee -a "$LOG"
 echo "Drop empty file named START_PIPELINE inside gs://${INPUT_BUCKET_NAME}/<folder_with_batch_config> "  | tee -a "$LOG"

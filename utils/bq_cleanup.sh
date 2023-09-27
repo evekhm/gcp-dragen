@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../SET"
+source "$DIR/../setup/init_env_vars.sh"
 
 DELETE='DELETE FROM `'"${PROJECT_ID}"'`.'"${DATASET}."''"${TASK_STATUS_TABLE_ID}"' WHERE true; '
 
