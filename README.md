@@ -141,7 +141,7 @@ gcloud config set project "${PROJECT_ID}" --quiet
 
 [//]: # (```)
 
-~~~~Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`):
+Use your Dragen license from Illumina (`ILLUMINA_LICENSE`), JARVICE username (`JXE_USERNAME`) and api key (`JXE_APIKEY`):
 > ILLUMINA_LICENSE should be in the format: _https://YOUR_LICENSE_SECRET_KEY@license.edicogenome.com_
 
 ```shell
@@ -497,7 +497,7 @@ Done! Generated:
 >      python main.py -p 14 -b 320 -c gs://$PROJECT_ID-config/cram_config_378.json 
 >                -o gs://$PROJECT_ID-trigger/10K_3_7_8 -s gs://$PROJECT_ID-trigger/cram/input_list/10K_samples.txt
 >```
-~~~~
+
 Trigger the pipeline:
 
 ```shell
