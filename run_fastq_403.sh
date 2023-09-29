@@ -17,4 +17,4 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${DIR}/setup/init_env_vars.sh"
 
 #bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
-gsutil cp "${START_PIPELINE_FILE}" gs://"${INPUT_BUCKET_NAME}/fastq/"
+gsutil cp "${START_PIPELINE_FILE}" gs://"${INPUT_BUCKET_NAME}/fastq/403/"
