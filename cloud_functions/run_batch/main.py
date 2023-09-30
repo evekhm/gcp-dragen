@@ -19,6 +19,7 @@ import datetime
 import json
 import os
 import uuid
+from typing import List
 
 from google.api_core.exceptions import NotFound
 from google.cloud import batch_v1
@@ -56,7 +57,7 @@ gcs = storage.Client()  # cloud storage
 sm = None  # secret_manager
 batch = None  # batch job client
 
-JOB_NAME = os.getenv("JOB_NAME_SHORT", "dragen-job")
+JOB_NAME = os.getenv("JOB_NAME_SHORT", "job-dragen")
 NETWORK = os.getenv("GCLOUD_NETWORK", "default")
 SUBNET = os.getenv("GCLOUD_SUBNET", "default")
 
@@ -250,9 +251,9 @@ def create_batch_job(bucket_name, batch_config_path, job_labels):
     input_option = batch_config.get("input_options", {})
     input_type = input_option.get("input_type")
     if input_type.lower() == CRAM_INPUT:
-        extension = ".cram"
+        extensions = [".cram"]
     elif input_type.lower() == FASTQ_INPUT:
-        extension = ".ora"
+        extensions = [".ora", ".gz"]
     else:
         Logger.error(f"create_batch_job - Error, unsupported type {input_type}")
         return
@@ -276,7 +277,7 @@ def create_batch_job(bucket_name, batch_config_path, job_labels):
         samples_list.extend(get_rows_from_file(input_list_uri))
     input_path = input_option.get("input_path", None)
     if input_path:
-        samples_list.extend(get_samples_list_from_path(input_path, extension))
+        samples_list.extend(get_samples_list_from_path(input_path, extensions))
     if len(samples_list) == 0:
         Logger.error("create_batch_job - Error, no input files detected")
         return
@@ -330,7 +331,7 @@ def task_info(dragen_options, jarvice_options, samples_list, input_type):
             env_variables[OUTPUT_PATH] = [
                 dragen_options.get("--output-directory").replace("<date>", date_str)
             ]
-
+        inputs = " ${INPUT_PATH}"
         command = get_task_command(
             dragen_options=dragen_options,
             jarvice_options=jarvice_options,
@@ -376,7 +377,7 @@ def task_info(dragen_options, jarvice_options, samples_list, input_type):
     return None, None
 
 
-def get_samples_list_from_path(path_uri: str, extension: str):
+def get_samples_list_from_path(path_uri: str, extensions: List[str]):
     Logger.info(f"get_samples_list_from_path - {path_uri}")
     bucket_name, prefix = split_uri_2_bucket_prefix(path_uri)
     if prefix != "":
@@ -386,9 +387,10 @@ def get_samples_list_from_path(path_uri: str, extension: str):
 
     # for b in gcs.list_blobs(bucket_name, prefix=f"{dir_name}", delimiter="/"):
     for b in gcs.list_blobs(bucket_name, prefix=f"{prefix}"):
-        if b.name.lower().endswith(extension.lower()):
-            sample_name = os.path.splitext(os.path.basename(b.name))[0]
-            input_list.append([sample_name, f"s3://{bucket_name}/{b.name}"])
+        for extension in extensions:
+            if b.name.lower().endswith(extension.lower()):
+                sample_name = os.path.splitext(os.path.basename(b.name))[0]
+                input_list.append([sample_name, f"s3://{bucket_name}/{b.name}"])
 
     Logger.info(f"get_samples_list_from_path - input_list={input_list}")
     return input_list

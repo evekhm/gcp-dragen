@@ -1,0 +1,31 @@
+{
+  "dragen_options": {
+    "--force": "",
+    "--RGID": "HG002",
+    "--RGSM": "HG002",
+    "--enable-variant-caller": "true",
+    "--vc-emit-ref-confidence": "GVCF",
+    "--vc-enable-vcf-output": "true",
+    "--enable-duplicate-marking": "true",
+    "--enable-map-align": "true",
+    "--enable-map-align-output": "true",
+    "--vc-frd-max-effective-depth": "40",
+    "--vc-enable-joint-detection": "true",
+    "--ht-alt-aware-validate": "false",
+    "--read-trimmers": "polyg",
+    "--soft-read-trimmers": "none",
+    "--logging-to-output-dir": "true",
+    "-r": "s3://__DATA_BUCKET__/atos/v8",
+    "--output-format": "CRAM",
+    "--output-file-prefix": "HG002_pure",
+    "--output-directory": "s3://__OUT_BUCKET__/fastq/<date>"
+  },
+  "jarvice_options": {
+    "dragen_app": "illumina-dragen_4_0_3n",
+    "entrypoint": "__ENTRYPOINT__",
+    "stub": "__STUB__",
+    "jarvice_machine_type": "__JARVICE_MACHINE_TYPE__",
+    "api_host": "__API_HOST__",
+    "image_uri": "__IMAGE__"
+  }
+}
