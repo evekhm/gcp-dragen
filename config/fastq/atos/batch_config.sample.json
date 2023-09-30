@@ -10,6 +10,6 @@
   "input_options": {
     "input_type": "fastq",
     "input_path": "gs://__DATA_BUCKET__/atos/inputs",
-    "config": "gs://__CONFIG_BUCKET__/fastq_config_atos_403.json"
+    "config": "gs://__CONFIG_BUCKET__/fastq_config_atos_378.json"
   }
 }
