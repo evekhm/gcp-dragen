@@ -82,11 +82,20 @@ variable "dataset_id" {
   }
 }
 
-variable "table_id" {
+variable "job_array_table_id" {
   type        = string
-  description = "Table ID"
+  description = "Table ID for job_array"
   validation {
-    condition     = length(var.table_id) > 0
+    condition     = length(var.job_array_table_id) > 0
+    error_message = "The table_id value must be an non-empty string."
+  }
+}
+
+variable "tasks_status_table_id" {
+  type        = string
+  description = "Table ID for task status updates"
+  validation {
+    condition     = length(var.tasks_status_table_id) > 0
     error_message = "The table_id value must be an non-empty string."
   }
 }

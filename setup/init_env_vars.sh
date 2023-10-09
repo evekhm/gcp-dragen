@@ -87,7 +87,9 @@ export TEST_RUN_DIR="gs://${INPUT_BUCKET_NAME}/test"
 # BIGQUERY
 export DATASET="dragen_illumina"
 export TASK_STATUS_TABLE_ID="tasks_status"
+export JOB_ARRAY_TABLE_ID="job_array"
 export BIGQUERY_DB_TASKS="${DATASET}.${TASK_STATUS_TABLE_ID}"
+export BIGQUERY_DB_JOB_ARRAY="${DATASET}.${JOB_ARRAY_TABLE_ID}"
 
 
 # Terraform
@@ -104,7 +106,8 @@ export TF_VAR_config_bucket=${CONFIG_BUCKET_NAME}
 export TF_VAR_trigger_bucket=${INPUT_BUCKET_NAME}
 export TF_VAR_output_bucket=${OUTPUT_BUCKET_NAME}
 export TF_VAR_data_bucket=${DATA_BUCKET_NAME}
-export TF_VAR_table_id=${TASK_STATUS_TABLE_ID}
+export TF_VAR_tasks_status_table_id=${TASK_STATUS_TABLE_ID}
+export TF_VAR_job_array_table_id=${JOB_ARRAY_TABLE_ID}
 export TF_VAR_dataset_id=${DATASET}
 export TF_VAR_pubsub_topic_batch_job_state_change=$PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE
 export TF_VAR_pubsub_topic_batch_task_state_change=$PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE
@@ -120,6 +123,8 @@ export TF_VAR_jarvice_api_username=$JXE_USERNAME
 #export TF_RUNNER_SA_EMAIL="terraform-runner@$PROJECT_ID.iam.gserviceaccount.com"
 #export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=$TF_RUNNER_SA_EMAIL
 
+# SLACK
+export SLACK_WEB_HOOK_SECRET_NAME="SlackWebHook"
 
 echo "Using: "
 echo "      PROJECT_ID=$PROJECT_ID"

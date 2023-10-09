@@ -135,11 +135,12 @@ module "topic_batch_job_state_change_pubsub" {
 
 
 module "bigquery" {
-  depends_on = [module.project_services, module.service_accounts]
-  source     = "../../modules/bigquery"
-  dataset_id = var.dataset_id
-  project_id = var.project_id
-  table_id   = var.table_id
+  depends_on            = [module.project_services, module.service_accounts]
+  source                = "../../modules/bigquery"
+  dataset_id            = var.dataset_id
+  project_id            = var.project_id
+  job_array_table_id    = var.job_array_table_id
+  tasks_status_table_id = var.tasks_status_table_id
 }
 
 

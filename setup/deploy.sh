@@ -68,6 +68,7 @@ function deploy_run_batch_cf(){
       --set-env-vars JARVICE_API_USERNAME_SECRET_NAME=$JARVICE_API_USERNAME_SECRET_NAME \
       --set-env-vars JOBS_INFO_PATH=$JOBS_INFO_PATH \
       --set-env-vars BIGQUERY_DB_TASKS=$BIGQUERY_DB_TASKS \
+      --set-env-vars BIGQUERY_DB_JOB_ARRAY=$BIGQUERY_DB_JOB_ARRAY \
       --set-env-vars PROJECT_ID=$PROJECT_ID \
       --set-env-vars JOBS_LIST_URI=$JOBS_LIST_URI \
       --set-env-vars PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE=${PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE} \
@@ -90,6 +91,7 @@ function deploy_get_status_cf(){
       --ingress-settings=${INGRESS_SETTINGS} \
       --set-env-vars JOBS_INFO_PATH=$JOBS_INFO_PATH \
       --set-env-vars BIGQUERY_DB_TASKS=$BIGQUERY_DB_TASKS \
+      --set-env-vars BIGQUERY_DB_TASKS=$BIGQUERY_DB_JOB_ARRAY \
       --set-env-vars PROJECT_ID=$PROJECT_ID --docker-registry=artifact-registry
 }
 

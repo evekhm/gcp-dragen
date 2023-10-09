@@ -631,17 +631,34 @@ Following dragen `VERSION`(s) are supported:
     }
 ```
 
-**3.10.4** version of DRAGEN:
+* `illumina-dragen_4_2_4n`
 
-- "illumina-dragen_3_10_4n"
+* `illumina-dragen_4_0_3n_7_g44afa2a0`
 
-**3.7.8** version:
+* `illumina-dragen_3_10_4n_7_g93fc1329`
 
-- "illumina-dragen_3_7_8n"
+* `illumina-dragen_3_7_8n`
 
-**4.0.3** version of DRAGEN
+## Slack Integration
 
-- "illumina-dragen_4_0_3n"
+For Slack Integration you need to create Webhook URL:
+* Have a created Workspace and a Slack Channel
+  * Inside Workspace go to Settings & administration -> Manage Apps
+  * Click on Build (Top Right corner)  => Create New Application from scratch => Give Application Name (Such as GCP-DRAGEN-notification-sender)
+  * Add features and functionality for the App:
+    * Incoming Webhooks - to post messages from external sources
+    * Click on Activate
+  * Add new Webhook to Workspace
+  * Add required permissions to access the channel:
+    * Select the previously created channel from the drop-down => Click Allow
+  * Copy the Webhook URL
+
+
+Use previously created Webhook URL to create a secret:
+```shell
+setup/add_slack_secret.sh <WEB-HOOK-URL-HERE>
+```
+
 
 ## References
 

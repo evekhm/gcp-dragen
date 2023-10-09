@@ -25,8 +25,13 @@ variable "dataset_id" {
   description = "Dataset ID"
 }
 
-variable "table_id" {
+variable "tasks_status_table_id" {
   type        = string
-  description = "Table ID"
+  description = "Table ID for task status"
+}
+
+variable "job_array_table_id" {
+  type        = string
+  description = "Table ID for table with job array"
 }
 

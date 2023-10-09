@@ -9,7 +9,7 @@
   },
   "input_options": {
     "input_type": "cram",
-    "input_list": "gs://__IN_BUCKET__/cram/input_list/sample.txt",
+    "input_list": "gs://__IN_BUCKET__/cram/input_list/20_21_samples.txt",
     "config": "gs://__CONFIG_BUCKET__/dryrun_config_ok.json"
   }
 }

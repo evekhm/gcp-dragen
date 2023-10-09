@@ -14,22 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import List, Dict
-
-from commonek.params import PROJECT_ID, BIGQUERY_DB_TASKS
 from commonek.logging import Logger
 from google.cloud import bigquery
 
 bigquery_client = bigquery.Client()
 
-assert BIGQUERY_DB_TASKS, "BIGQUERY_DB_TASKS is not set"
+
+def stream_data_to_bigquery(rows_to_insert: List[Dict], table_id: str):
+    try:
+        Logger.info(
+            f"stream_data_to_bigquery table_id={table_id}, rows_to_insert={rows_to_insert}"
+        )
+        errors = bigquery_client.insert_rows_json(table_id, rows_to_insert)
+
+        return errors
+    except Exception as exc:
+        Logger.error(f"stream_data_to_bigquery - failed with {exc}")
+        return [{"errors": exc}]
 
 
-def stream_tasks_to_bigquery(rows_to_insert: List[Dict]):
-    table_id = f"{PROJECT_ID}.{BIGQUERY_DB_TASKS}"
-    Logger.info(
-        f"stream_tasks_to_bigquery table_id={table_id}, rows_to_insert={rows_to_insert}"
-    )
-
-    errors = bigquery_client.insert_rows_json(table_id, rows_to_insert)
-
-    return errors
+def run_query(sql: str):
+    try:
+        Logger.info(
+            f"run_query with sql={sql}"
+        )
+        query_config = bigquery.QueryJobConfig(use_legacy_sql=False)
+        query_job = bigquery_client.query(sql, job_config=query_config)
+        return query_job.result()
+    except Exception as exc:
+        Logger.error(f"run_query - failed with {exc}")
+        return None

@@ -30,7 +30,7 @@
   },
   "jarvice_options": {
     "entrypoint": "/bin/sh",
-    "stub": "sleep 30 && echo DRAGEN finished normally && echo Command Line: ",
+    "stub": "sleep 5 && echo DRAGEN finished normally && echo Command Line: ",
     "dragen_app": "illumina-dragen_3_7_8n",
     "image_uri": "gcr.io/google-containers/busybox",
     "jarvice_machine_type": "__JARVICE_MACHINE_TYPE__",

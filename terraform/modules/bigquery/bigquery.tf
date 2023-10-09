@@ -31,7 +31,7 @@ resource "google_bigquery_table" "table_id" {
 
   deletion_protection = false
   dataset_id          = var.dataset_id
-  table_id            = var.table_id
+  table_id            = var.tasks_status_table_id
 
   schema = <<EOF
 [
@@ -42,22 +42,10 @@ resource "google_bigquery_table" "table_id" {
     "description": "Id of the Batch Job used to create processing task"
   },
   {
-    "name": "job_label",
-    "type": "STRING",
-    "mode": "NULLABLE",
-    "description": "Optional job label when created"
-  },
-  {
     "name": "task_id",
     "type": "STRING",
     "mode": "Required",
     "description": "Id of the Task used to processing Dragen command"
-  },
-  {
-    "name": "sample_id",
-    "type": "STRING",
-    "mode": "NULLABLE",
-    "description": "SAMPLE Id extracted from the Dragen command (If found in the corresponding Log file)"
   },
   {
     "name": "status",
@@ -66,16 +54,74 @@ resource "google_bigquery_table" "table_id" {
     "description": "Status of the task as received"
   },
   {
-    "name": "input_type",
+    "name": "timestamp",
+    "type": "DATETIME",
+    "mode": "Required",
+    "description": "Timestamp UTC"
+  }
+]
+EOF
+
+}
+
+resource "google_bigquery_table" "job_array_table_id" {
+  depends_on = [
+    google_bigquery_dataset.data_set
+  ]
+
+  deletion_protection = false
+  dataset_id          = var.dataset_id
+  table_id            = var.job_array_table_id
+
+  schema = <<EOF
+[
+  {
+    "name": "job_id",
+    "type": "STRING",
+    "mode": "Required",
+    "description": "Id of the Batch Job used to create processing task"
+  },
+  {
+    "name": "job_name",
+    "type": "STRING",
+    "mode": "Required",
+    "description": "Name of the Batch Job used to create processing task"
+  },
+  {
+    "name": "job_label",
     "type": "STRING",
     "mode": "NULLABLE",
-    "description": "Input type (CRAM, FASTQ)"
+    "description": "Optional job label when created"
+  },
+  {
+    "name": "batch_task_index",
+    "type": "INTEGER",
+    "mode": "Required",
+    "description": "Index in the batch Array"
+  },
+  {
+    "name": "variables",
+    "type": "JSON",
+    "mode": "NULLABLE",
+    "description": "Variables for the index array"
+  },
+  {
+    "name": "sample_id",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "sample_id being processed"
   },
   {
     "name": "input_path",
     "type": "STRING",
     "mode": "NULLABLE",
-    "description": "Path to the input directory"
+    "description": "input path for the dragen processing"
+  },
+  {
+    "name": "input_type",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Input type (CRAM, FASTQ, FASTQ_LIST)"
   },
   {
     "name": "output_path",

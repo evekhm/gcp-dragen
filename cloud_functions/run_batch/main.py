@@ -19,26 +19,25 @@ import datetime
 import json
 import os
 import uuid
-from typing import List
+from typing import List, Dict
 
 from google.api_core.exceptions import NotFound
 from google.cloud import batch_v1
-from google.cloud import secretmanager
 from google.cloud import storage
-from commonek.bq_helper import stream_tasks_to_bigquery
+
+from commonek.bq_helper import stream_data_to_bigquery
 from commonek.csv_helper import trigger_job_from_csv
 from commonek.dragen_command_helper import DragenCommand
 from commonek.gcs_helper import file_exists
 from commonek.gcs_helper import get_rows_from_file
+from commonek.helper import get_secret_value
 from commonek.helper import split_uri_2_bucket_prefix
 from commonek.logging import Logger
-from commonek.params import BATCH_TASK_INDEX
-from commonek.params import COMMAND
+from commonek.params import BIGQUERY_DB_JOB_ARRAY
 from commonek.params import CRAM_INPUT
 from commonek.params import FASTQ_INPUT
 from commonek.params import FASTQ_LIST_INPUT
 from commonek.params import INPUT_PATH
-from commonek.params import INPUT_TYPE
 from commonek.params import JOBS_INFO_PATH
 from commonek.params import JOBS_LIST_URI
 from commonek.params import JOB_LABEL_NAME
@@ -47,14 +46,12 @@ from commonek.params import OUTPUT_PATH
 from commonek.params import PROJECT_ID
 from commonek.params import REGION
 from commonek.params import SAMPLE_ID
-from commonek.params import TASK_SCHEDULED
 from commonek.params import TRIGGER_FILE_NAME
 
 assert JOBS_INFO_PATH, "JOBS_INFO_PATH is not set"
 BATCH_CONFIG_FILE_NAME = "batch_config.json"
 # API clients
 gcs = storage.Client()  # cloud storage
-sm = None  # secret_manager
 batch = None  # batch job client
 
 JOB_NAME = os.getenv("JOB_NAME_SHORT", "job-dragen")
@@ -134,7 +131,7 @@ def load_config(bucket_name, file_path, recursive_find=False):
 
 
 def run_dragen_job(event, context):
-    Logger.info(event)
+    Logger.info(f"============================ run_dragen_job - Event received {event} with context {context}")
     bucket_name, file_path = None, None
 
     if "bucket" in event:
@@ -307,7 +304,7 @@ def create_batch_job(bucket_name, batch_config_path, job_labels):
         job_labels=job_labels,
         input_type=input_type,
         command=command,
-        env_variables=env_variables,
+        variables=env_variables,
     )
 
 
@@ -451,20 +448,8 @@ def get_task_command(dragen_options, jarvice_options, inputs, replace_options):
         f""" {dragen_options_str} """
     )
     dragen_command = DragenCommand(command, stub_script)
-    Logger.info(f"======== {dragen_command}")
+    Logger.info(f"DRAGEN Command: {dragen_command}")
     return dragen_command
-
-
-def get_secret_value(secret_name, project_id):
-    global sm
-    if not sm:
-        sm = secretmanager.SecretManagerServiceClient()
-
-    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
-    Logger.info(f"Getting secret for {secret_path}")
-    response = sm.access_secret_version(request={"name": secret_path})
-    payload = response.payload.data.decode("UTF-8")
-    return payload
 
 
 def get_options(config):
@@ -482,7 +467,7 @@ def create_script_job(
     command: DragenCommand,
     jarvice_options,
     job_labels,
-    env_variables,
+    variables,
     input_type,
 ):
     """
@@ -508,17 +493,17 @@ def create_script_job(
     # Tasks are grouped inside a job using TaskGroups.
     # Currently, it's possible to have only one task group.
     group = batch_v1.TaskGroup()
-    task_count = len(env_variables[list(env_variables.keys())[0]])
+    task_count = len(variables[list(variables.keys())[0]])
     Logger.info(
         f"======== Creating job with {task_count} tasks and {parallelism} to be run in parallel ========"
     )
 
     task_environments = []
-    if len(env_variables) > 0:
+    if len(variables) > 0:
         for index in range(task_count):
             env_dict = {}
-            for key in env_variables:
-                env_dict[key] = env_variables[key][index]
+            for key in variables:
+                env_dict[key] = variables[key][index]
             task_environments.append(batch_v1.Environment(variables=env_dict))
 
     group.parallelism = parallelism
@@ -629,66 +614,74 @@ def create_script_job(
     created_job = batch.create_job(create_request)
 
     for i in range(task_count):
+
+        # This is done to simplify BigQuery operations
         sample_id = None
         input_path = None
         output_path = None
-        if SAMPLE_ID in env_variables:
-            sample_id = env_variables[SAMPLE_ID][i]
+        task_variables = {}
+        if SAMPLE_ID in variables:
+            sample_id = variables[SAMPLE_ID][i]
 
-        if INPUT_PATH in env_variables:
-            input_path = env_variables[INPUT_PATH][i]
+        if INPUT_PATH in variables:
+            input_path = variables[INPUT_PATH][i]
 
-        if OUTPUT_PATH in env_variables:
-            output_path = env_variables[OUTPUT_PATH][i]
-        stream_data_to_bq(
-            created_job.uid,
-            sample_id,
-            command,
-            input_path,
-            input_type,
-            output_path,
-            i,
-            task_environments,
-            created_job.labels[JOB_LABEL_NAME],
+        if OUTPUT_PATH in variables:
+            output_path = variables[OUTPUT_PATH][i]
+
+        for key in variables:
+            task_variables[key] = variables[key][i]
+
+        job_name = created_job.name.split("/")[-1]
+
+        stream_job_array_to_bq(
+            index=i,
+            task_variables=task_variables,
+            job_id=created_job.uid,
+            job_name=job_name,
+            job_label=created_job.labels[JOB_LABEL_NAME],
+            command=command,
+            task_environments=task_environments,
+            output_path=output_path,
+            input_type=input_type,
+            input_path=input_path,
+            sample_id=sample_id
         )
 
-    write_job_csv(JOBS_INFO_PATH, created_job, command, task_environments, input_type)
 
-
-def stream_data_to_bq(
-    job_id,
-    sample_id,
-    command,
-    input_path,
-    input_type,
-    output_path,
-    index,
-    task_environments,
-    label,
-):
+def stream_job_array_to_bq(index: int, task_variables: Dict[str], job_id: str,
+                           job_name: str, job_label: str,
+                           command: DragenCommand,
+                           task_environments,
+                           input_path,
+                           input_type,
+                           output_path,
+                           sample_id,
+                           ):
     now = datetime.datetime.now(datetime.timezone.utc)
-    errors = stream_tasks_to_bigquery(
-        [
-            {
-                "job_id": job_id,
-                "job_label": label,
-                "task_id": "",
-                "sample_id": sample_id,
-                "status": TASK_SCHEDULED,
-                "input_type": input_type,
-                "input_path": input_path,
-                "output_path": magic_replace(output_path, index, task_environments),
-                "command": magic_replace(command, index, task_environments),
-                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-        ]
-    )
+    data = [
+        {
+            "batch_task_index": index,
+            "variables": json.dumps(task_variables),
+            "job_id": job_id,
+            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "job_label": job_label,
+            "command": magic_replace(command, index, task_environments),
+            "job_name": job_name,
+            "input_type": input_type,
+            "input_path": input_path,
+            "output_path": output_path,
+            "sample_id": sample_id,
+        }
+    ]
+    table_id = f"{PROJECT_ID}.{BIGQUERY_DB_JOB_ARRAY}"
+    errors = stream_data_to_bigquery(data, table_id)
     if not errors:
-        Logger.info(f"New rows have been added for job_id {job_id} ")
+        Logger.info(f"New rows have been added into {table_id} for job_id {job_id} ")
     elif isinstance(errors, list):
         error = errors[0].get("errors")
         Logger.error(
-            f"Encountered errors while inserting rows for job_id {job_id}: {error}"
+            f"Encountered errors while inserting rows into {table_id} for job_id {job_id}: {error}"
         )
 
 
@@ -706,45 +699,6 @@ def magic_replace(input_str, batch_task_index, task_environments):
             key, task_environments[batch_task_index].variables[key]
         )
     return input_str
-
-
-def write_job_csv(dir_path, created_job, command, task_environments, input_type):
-    job_uid = created_job.uid
-    if dir_path:
-        bucket_name, path = split_uri_2_bucket_prefix(dir_path)
-        header = True
-        csv_str = ""
-        for index, t in enumerate(task_environments):
-            if header:
-                csv_str = (
-                    f"{BATCH_TASK_INDEX},"
-                    + ",".join(t.variables.keys())
-                    + f",{INPUT_TYPE},{COMMAND}"
-                    + "\n"
-                )
-                header = False
-            command = magic_replace(command, index, task_environments)
-            csv_str += (
-                magic_replace(
-                    ",".join(
-                        [str(index)]
-                        + list(t.variables.values())
-                        + [input_type, command]
-                    ),
-                    index,
-                    task_environments,
-                )
-                + "\n"
-            )
-
-        bucket = gcs.get_bucket(bucket_name)
-        if path == "":
-            f_name = f"{job_uid}.csv"
-        else:
-            f_name = f"{path}/{job_uid}.csv"
-        blob = bucket.blob(f"{f_name}")
-        Logger.info(f"Uploading status information into gs://{bucket.name}/{f_name}")
-        blob.upload_from_string(data=csv_str, content_type="text/csv")
 
 
 def get_args():
