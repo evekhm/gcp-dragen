@@ -3,5 +3,6 @@ google-cloud-logging==3.2.5
 google-cloud-storage==2.9.0
 google-cloud-bigquery==3.4.1
 google-cloud-secret-manager==2.10.0
+slack_sdk
 --extra-index-url https://__GCLOUD_REGION__-python.pkg.dev/__PROJECT_ID__/python-repo/simple/
 commonek==0.0.1

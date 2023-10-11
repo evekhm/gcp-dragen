@@ -78,7 +78,7 @@ export SOURCE_DIR_SCHEDULER="${CLOUD_FUNCTIONS_DIR}/scheduler"  # Cloud Function
 export SOURCE_ENTRY_POINT_SCHEDULER='get_job_update'
 export TRIGGER_JOB_LIST_FILE_NAME="jobs.csv"
 export TRIGGER_JOB_LIST_FILE="${ROOT_DIR}/tests/${TRIGGER_JOB_LIST_FILE_NAME}"
-export JOBS_LIST_URI="gs://${INPUT_BUCKET_NAME}/scheduler/${TRIGGER_JOB_LIST_FILE_NAME}"
+export JOBS_LIST_URI="gs://${INPUT_BUCKET_NAME}/scheduler/${TRIGGER_JOB_LIST_FILE_NAME}" #Copies the job execution schedule used by scheuler
 export PUBSUB_TOPIC_BATCH_JOB_STATE_CHANGE="job-dragen-job-state-change-topic"
 
 # TESTS
@@ -119,12 +119,9 @@ export TF_VAR_jarvice_api_key_secret_name=$JARVICE_API_KEY_SECRET_NAME
 export TF_VAR_jarvice_api_key=$JXE_APIKEY
 export TF_VAR_jarvice_api_username_secret_name=$JARVICE_API_USERNAME_SECRET_NAME
 export TF_VAR_jarvice_api_username=$JXE_USERNAME
-## Terraform impersonate service account
-#export TF_RUNNER_SA_EMAIL="terraform-runner@$PROJECT_ID.iam.gserviceaccount.com"
-#export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=$TF_RUNNER_SA_EMAIL
 
 # SLACK
-export SLACK_WEB_HOOK_SECRET_NAME="SlackWebHook"
+export SLACK_API_TOKEN_SECRET_NAME="slack-api-token"
 
 echo "Using: "
 echo "      PROJECT_ID=$PROJECT_ID"

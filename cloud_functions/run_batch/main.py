@@ -38,7 +38,6 @@ from commonek.params import CRAM_INPUT
 from commonek.params import FASTQ_INPUT
 from commonek.params import FASTQ_LIST_INPUT
 from commonek.params import INPUT_PATH
-from commonek.params import JOBS_INFO_PATH
 from commonek.params import JOBS_LIST_URI
 from commonek.params import JOB_LABEL_NAME
 from commonek.params import JOB_LIST_FILE_NAME
@@ -48,7 +47,6 @@ from commonek.params import REGION
 from commonek.params import SAMPLE_ID
 from commonek.params import TRIGGER_FILE_NAME
 
-assert JOBS_INFO_PATH, "JOBS_INFO_PATH is not set"
 BATCH_CONFIG_FILE_NAME = "batch_config.json"
 # API clients
 gcs = storage.Client()  # cloud storage

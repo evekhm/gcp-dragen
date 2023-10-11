@@ -642,23 +642,48 @@ Following dragen `VERSION`(s) are supported:
 ## Slack Integration
 
 For Slack Integration you need to create Webhook URL:
-* Have a created Workspace and a Slack Channel
+* Have a created Workspace and a Slack Channel created
   * Inside Workspace go to Settings & administration -> Manage Apps
-  * Click on Build (Top Right corner)  => Create New Application from scratch => Give Application Name (Such as GCP-DRAGEN-notification-sender)
-  * Add features and functionality for the App:
-    * Incoming Webhooks - to post messages from external sources
-    * Click on Activate
-  * Add new Webhook to Workspace
-  * Add required permissions to access the channel:
-    * Select the previously created channel from the drop-down => Click Allow
-  * Copy the Webhook URL
+  * Click on Build (Top Right corner) 
+
+  * Go to [Slack Api](https://api.slack.com/) => Your apps (Top right corner):
+    * Create New App => Create New Application from scratch => Give Application Name (Such as `GCP-DRAGEN-notification`)
+    * Add Required scopes and Install Application
+      * Required Bot Token Scope:  `chat:write:bot`
+    * Go to OAuth & Permissions => Copy the Bot User oAuth Token 
+      * Go to Scopes -> Bot Token Scopes
+    * OAuth Tokens for Your Workspace
+      * Install to Workspace => Select Notification Channel => Allow
+    * Make sure to add created App into the Channel
+    * Copy created _Bot User OAuth Token_ inside _OAuth Tokens for Your Workspace_
 
 
-Use previously created Webhook URL to create a secret:
+Use previously created _Bot User OAuth Token_ to create a secret (Also use this script to update existing Slack Token when needed):
+
 ```shell
-setup/add_slack_secret.sh <WEB-HOOK-URL-HERE>
+export PROJECT_ID=<YOUR-PROJECT-ID>
+source setup/init_env_vars.sh
 ```
 
+```shell
+./setup/set_slack_secret.sh <YOUR-BOT-USER-OAUTH-TOKEN>
+```
+```shell
+export SLACK_CHANNEL=<SLACK_CHANNEL>
+```
+
+Test created secret and notification channel:
+
+```shell
+python tests/slack_test.py -m "Your test message"
+```
+
+You should receive the test message in the Slack notification channel. 
+When succeeded, proceed with redeploying cloud functions (it will now use the previously set `SLACK_CHANNEL` environment variable to pass into the Cloud Function Variables)
+
+```shell
+setup/deploy_cf.sh
+```
 
 ## References
 
@@ -672,51 +697,4 @@ setup/add_slack_secret.sh <WEB-HOOK-URL-HERE>
 gcloud batch jobs describe --location us-central1 <JOB_NAME>
 ```
 
-[//]: # (## Sharing Code)
 
-[//]: # ()
-[//]: # (Configure the repo access control so customer can view or download it:)
-
-[//]: # ()
-[//]: # (- Go to [cloud-ce-shared-csr project]&#40;https://source.cloud.google.com/cloud-ce-shared-csr?project=cloud-ce-shared-cs&#41; in Cloud Source Repos)
-
-[//]: # (- Select [this repository]&#40;https://source.cloud.google.com/cloud-ce-shared-csr/evekhm-broad-dragen&#41;)
-
-[//]: # (- Select the settings icon &#40;top right&#41;)
-
-[//]: # (- Select Permissions)
-
-[//]: # (- In the Members box, add one or more customer's email address &#40;They need to have a google account&#41;)
-
-[//]: # (- Set Role to: Source repository-->Source Repository Reader)
-
-[//]: # (- Click Add)
-
-[//]: # ()
-[//]: # (Your Customer can now clone the repository in their own environment. Provide the following instructions to the customer:)
-
-[//]: # ()
-[//]: # (- Install the [Google Cloud SDK]&#40;https://cloud.google.com/sdk&#41;)
-
-[//]: # (- Authenticate the SDK with their Google credentials)
-
-[//]: # ()
-[//]: # (```shell)
-
-[//]: # (gcloud init)
-
-[//]: # (```)
-
-[//]: # ()
-[//]: # (- Clone the repository &#40;replace USERNAME-project-name with your repo name&#41;)
-
-[//]: # ()
-[//]: # (```shell)
-
-[//]: # (gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr)
-
-[//]: # (cd evekhm-broad-dragen)
-
-[//]: # (git checkout main)
-
-[//]: # (```)

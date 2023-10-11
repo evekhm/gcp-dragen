@@ -39,11 +39,6 @@ JOB_LIST_FILE_NAME = os.path.basename(JOBS_LIST_URI)
 
 TRIGGER_FILE_NAME = os.getenv("TRIGGER_FILE_NAME", "START_PIPELINE")
 
-# job_uid.csv generated into content
-JOBS_INFO_PATH = os.getenv(
-    "JOBS_INFO_PATH", f"gs://{PROJECT_ID}-output/jobs_created"
-)  # path to which job_id.csv is daved with job information
-
 # header for Jobs
 BATCH_TASK_INDEX = "BATCH_TASK_INDEX"
 INPUT_TYPE = "INPUT_TYPE"
@@ -69,5 +64,6 @@ TASK_VERIFIED_OK = "VERIFIED_OK"
 TASK_VERIFIED_FAILED = "VERIFIED_FAILED"
 
 # SLACK Integration
-SLACK_WEB_HOOK_SECRET = os.getenv("SLACK_WEB_HOOK_SECRET_NAME", "SlackWebHook")
+SLACK_CHANNEL = os.getenv("SLACK_CHANNEL")
+SLACK_API_TOKEN_SECRET_NAME = os.getenv("SLACK_API_TOKEN_SECRET_NAME", "slack-api-token")
 
