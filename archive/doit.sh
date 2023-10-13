@@ -14,25 +14,4 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../setup/init_env_vars.sh"
-
-SCRIPT=$1
-
-if [[ -z "${PROJECT_ID}" ]]; then
-  echo PROJECT_ID variable is not set.
-  exit
-fi
-
-if [ -z "$SCRIPT" ]; then
-  echo " Usage: ./run_query.sh QUERY_NAME"
-  echo " Options:"
-  echo "     - samples"
-  echo "     - sample [SAMPLE_NAME]"
-  echo "     - count"
-  exit
-fi
-
-#echo "Running $SCRIPT"
-bq query --project_id="$PROJECT_ID" --dataset_id=$BIGQUERY_DATASET --nouse_legacy_sql --flagfile="${DIR}/${SCRIPT}.sql" 2> /dev/null
-
-
+"${DIR}"/call_with_params.sh "${DIR}/../stubs/illumina-dragen_v1.2-rc.2_ek"

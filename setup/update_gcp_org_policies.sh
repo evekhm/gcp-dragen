@@ -1,7 +1,11 @@
 #!/bin/bash
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$WDIR/../utils/print"
-source "${WDIR}/init_env_vars.sh" > /dev/null 2>&1
+bash "$WDIR/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
 
 $printf "Updating organization policies: PROJECT_ID=${PROJECT_ID}"
 

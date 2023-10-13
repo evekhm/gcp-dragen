@@ -14,4 +14,4 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-"${DIR}"/call_with_params.sh "${DIR}/stubs/jarvice-dragen-stub.sh-v1.2"
+"${DIR}"/call_with_params.sh "${DIR}/../stubs/jarvice-dragen-stub.sh-v1.2"

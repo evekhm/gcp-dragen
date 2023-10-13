@@ -2,7 +2,12 @@
 set -e # Exit if error is detected during pipeline execution => terraform failing
 
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${WDIR}/init_env_vars.sh" > /dev/null 2>&1
+bash "$WDIR/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
+
 PWD=$(pwd)
 
 auto_approve=''

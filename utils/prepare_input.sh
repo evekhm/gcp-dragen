@@ -14,7 +14,12 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$DIR/../setup/init_env_vars.sh"  > /dev/null 2>&1
+bash "$DIR/../setup/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
+
 
 PARALLEL=10
 BATCH_SIZE=20

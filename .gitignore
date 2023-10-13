@@ -33,3 +33,4 @@
 /config/cram/dryrun_config_fail.json
 /config/cram/dryrun_config_pass.json
 /docs/Argolis.md
+/setup/.env

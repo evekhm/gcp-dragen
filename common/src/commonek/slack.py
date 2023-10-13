@@ -4,7 +4,8 @@ from typing import Optional
 import certifi
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-
+import datetime
+from datetime import timedelta
 from commonek.helper import get_secret_value
 from commonek.logging import Logger
 from commonek.params import (
@@ -30,7 +31,7 @@ class Slack:
             channel=channel,
             text=text,
             blocks=blocks,
-            unfurl_media=False,
+            unfurl_media=True,
         )
 
     # pylint: disable=dangerous-default-value
@@ -46,20 +47,25 @@ class Slack:
 
 
 def get_log_url(job_uid: str, task_id: Optional[str] = None):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    last_hour_date_time = datetime.datetime.now() - timedelta(hours=2)
+    now_str = now.strftime("%Y-%m-%dT%H:%M:%S")
+    last_hour_date_time_str = last_hour_date_time.strftime("%Y-%m-%dT%H:%M:%S")
     if task_id:
         task_str = f"resource.labels.task_id%3D%22task%2F{task_id}%2F0%2F0%22"
     else:
         task_str = ""
+
     log_console_url = f"https://console.cloud.google.com/logs/query;query=logName%3D%22projects%2F" \
                       f"{PROJECT_ID}%2Flogs%2Fbatch_task_logs%22%20OR%20%22projects%2F{PROJECT_ID}%2Flogs" \
                       f"%2Fbatch_agent_logs%22%20labels.job_uid%3D%22" \
-                      f"{job_uid}%22%20{task_str}"
+                      f"{job_uid}%22%20{task_str}timestamp%3E%3D%22{last_hour_date_time_str}%22%20timestamp%3C%3D%22{now_str}%22?project={PROJECT_ID}"
     return f" Check the <{log_console_url}|logs> for more info."
 
 
 def get_output_path_url(output_path: str):
     output_path = output_path.replace("s3://", "").replace("gs://", "")
-    path_link = f"https://console.cloud.google.com/storage/browser/{output_path}"
+    path_link = f"https://console.cloud.google.com/storage/browser/{output_path}?project={PROJECT_ID}"
     return f" See the <{path_link}|output directory> for the generated results."
 
 

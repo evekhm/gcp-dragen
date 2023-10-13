@@ -15,9 +15,22 @@
 
 CDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$CDIR/../utils/print"
-source "${CDIR}"/init_env_vars.sh  > /dev/null 2>&1
+bash "$CDIR/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
 
 function build_common_package(){
+
+  # Will build, so first clean up directoryecho "
+  echo "Cleaning up ${CDIR}/../common/dist"
+  PWD=$(pwd)
+  cd "${CDIR}/../common" || exit
+  rm -rf "dist" 2> /dev/null
+  mkdir dist
+  cd "${PWD}"  || exit
+
   exists=$(gcloud artifacts repositories describe --location="${GCLOUD_REGION}" "${ARTIFACTS_REPO}" 2> /dev/null)
   if [ -z "$exists" ]; then
     $printf "Creating ${ARTIFACTS_REPO} repo ..."
@@ -41,19 +54,18 @@ function build_common_package(){
   fi
 
   if [ -z "$version_exists" ]; then
-    # Will build, so first clean up directory
-    rm "${CDIR}/../common/dist/*" 2> /dev/null
+
     $printf "Building package ${COMMON_PACKAGE_NAME} with version=${COMMON_PACKAGE_VERSION} ..."
     python3 -m venv env
     source env/bin/activate
     python3 -m pip install --upgrade build
-    pip3 install twine
+    pip install twine
     PWD=$(pwd)
     cd "${CDIR}"/../common || exit
     python3 -m build
 
-    pip3 install keyring
-    pip3 install keyrings.google-artifactregistry-auth
+    pip install keyring
+    pip install keyrings.google-artifactregistry-auth
 
   #  python3 -m twine upload --repository-url https://${GCLOUD_REGION}-python.pkg.dev/${PROJECT_ID}/${ARTIFACTS_REPO}/ "${DIR}"/dist/*
   #  python3 -m twine upload --repository-url https://${GCLOUD_REGION}-python.pkg.dev/${PROJECT_ID}/${ARTIFACTS_REPO}/ dist/*

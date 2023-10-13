@@ -1,4 +1,4 @@
 {
-    "dragen-job": "batch_config_fail",
-    "config": "batch_config_fail.json"
+    "dragen-job": "batch_config_ok",
+    "config": "batch_config_ok.json"
 }

@@ -1,6 +1,27 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ -f "$ROOT_DIR"/.env ]; then
+  # Pass parameters if any such as ENV to .env
+  source "$ROOT_DIR"/.env "$@"; retVal=$?
+
+  if [ $retVal -eq 2 ]; then
+    if [ "$#" -lt 1 ]; then
+      echo "Environment could not be selected. Please fix .env file and make sure you have default environment setup."
+    else
+      echo "Environment could not be selected for the provided" "$@" "- Please fix .env file  or input parameter and retry."
+    fi
+      echo "Exiting... "
+      exit $retVal
+  fi
+
+else
+  echo "Please create a .env file as follows: "
+  echo "sed 's|__ENV__|<your_alias-here>|g; s|__PROJECT_ID__|'\"$PROJECT_ID\"'|g; ' setup/.env.sample > setup/.env"
+  exit 2
+fi
+
 
 # Jarvice
 #export JXE_APP="illumina-dragen_4_0_3n"   # 4.0.3
@@ -63,14 +84,13 @@ export START_PIPELINE_FILE="${SOURCE_DIR_RUN_BATCH}/${TRIGGER_FILE_NAME}"
 # Common Shared package
 export ARTIFACTS_REPO="python-repo"
 export COMMON_PACKAGE_NAME="commonek"
-export COMMON_PACKAGE_VERSION="0.0.1"
+export COMMON_PACKAGE_VERSION="0.0.2"
 
 # Cloud Function Get Status
 export CLOUD_FUNCTION_NAME_GET_STATUS='get_status'
 export SOURCE_DIR_GET_STATUS="${CLOUD_FUNCTIONS_DIR}/get_status"  # Cloud Function Directory - relative (main.py)
 export SOURCE_ENTRY_POINT_GET_STATUS='get_status'
 export PUBSUB_TOPIC_BATCH_TASK_STATE_CHANGE="job-dragen-task-state-change-topic"
-export JOBS_INFO_PATH="gs://${OUTPUT_BUCKET_NAME}/jobs_created"
 
 # Cloud Function Scheduler
 export CLOUD_FUNCTION_NAME_SCHEDULER='job_scheduler'
@@ -131,3 +151,4 @@ echo "      JOB_SERVICE_ACCOUNT=$JOB_SERVICE_ACCOUNT"
 echo "      DATA_BUCKET_NAME=$DATA_BUCKET_NAME"
 echo "      CONFIG_BUCKET_NAME=$CONFIG_BUCKET_NAME"
 echo "      TF_BUCKET_NAME=$TF_BUCKET_NAME"
+echo "      SLACK_CHANNEL=$SLACK_CHANNEL"

@@ -16,8 +16,12 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$DIR/../utils/print"
 
-function setup_env_vars(){
-    source "${DIR}/init_env_vars.sh" > /dev/null 2>&1
+function check_env_vars(){
+    bash "$DIR/check_setup.sh"
+    retVal=$?
+    if [ $retVal -eq 2 ]; then
+      exit 2
+    fi
 }
 
 function build_common_package(){
@@ -42,6 +46,7 @@ function deploy_run_batch_cf(){
 
   sed 's|__GCLOUD_REGION__|'"$GCLOUD_REGION"'|g;
       s|__PROJECT_ID__|'"$PROJECT_ID"'|g;
+      s|__COMMON_PACKAGE_VERSION__|'"$COMMON_PACKAGE_VERSION"'|g;
       ' "${SOURCE_DIR_RUN_BATCH}/requirements.sample.txt" > "${SOURCE_DIR_RUN_BATCH}/requirements.txt"
   #delete_cloud_function $CLOUD_FUNCTION_NAME_RUN_BATCH
   gcloud functions deploy $CLOUD_FUNCTION_NAME_RUN_BATCH \
@@ -76,6 +81,7 @@ function deploy_run_batch_cf(){
 function deploy_get_status_cf(){
   sed 's|__GCLOUD_REGION__|'"$GCLOUD_REGION"'|g;
       s|__PROJECT_ID__|'"$PROJECT_ID"'|g;
+      s|__COMMON_PACKAGE_VERSION__|'"$COMMON_PACKAGE_VERSION"'|g;
       ' "${SOURCE_DIR_GET_STATUS}/requirements.sample.txt" > "${SOURCE_DIR_GET_STATUS}/requirements.txt"
   $printf "Deploying Cloud Function=[$CLOUD_FUNCTION_NAME_GET_STATUS]..."
   gcloud functions deploy ${CLOUD_FUNCTION_NAME_GET_STATUS} \
@@ -96,6 +102,7 @@ function deploy_get_status_cf(){
 function deploy_scheduler_cf(){
   sed 's|__GCLOUD_REGION__|'"$GCLOUD_REGION"'|g;
       s|__PROJECT_ID__|'"$PROJECT_ID"'|g;
+      s|__COMMON_PACKAGE_VERSION__|'"$COMMON_PACKAGE_VERSION"'|g;
       ' "${SOURCE_DIR_SCHEDULER}/requirements.sample.txt" > "${SOURCE_DIR_SCHEDULER}/requirements.txt"
   $printf "Deploying Cloud Function=[$CLOUD_FUNCTION_NAME_SCHEDULER]..."
   gcloud functions deploy ${CLOUD_FUNCTION_NAME_SCHEDULER} \
@@ -112,7 +119,7 @@ function deploy_scheduler_cf(){
       --docker-registry=artifact-registry
 }
 
-setup_env_vars
+check_env_vars
 
 build_common_package
 

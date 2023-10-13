@@ -37,6 +37,7 @@ resource "google_project_iam_member" "job_sa_iam" {
     "roles/storage.admin",        # Otherwise getting 403 GET ERROR for config.json
     "roles/bigquery.dataEditor",  # For BigQuery access (Could be narrowed down to the dataset)
     "roles/storage.objectCreator",
+    "roles/bigquery.user",
     "roles/bigquery.dataOwner"
   ])
   role    = each.key

@@ -1,1 +1,0 @@
-git clone ssh://evekhm@google.com@source.developers.google.com:2022/p/cloud-ce-shared-csr/r/evekhm-broad-dragen

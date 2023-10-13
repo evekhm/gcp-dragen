@@ -40,8 +40,12 @@ usage()
 }
 
 # Set up environment variables.
-setup_env_vars() {
-  source "${CDIR}"/init_env_vars.sh
+check_env_vars() {
+  bash "$CDIR/check_setup.sh"
+  retVal=$?
+  if [ $retVal -eq 2 ]; then
+    exit 2
+  fi
 }
 
 # Set up gcloud CLI
@@ -84,7 +88,7 @@ update_gcp_org_policies() {
   fi
 }
 
-setup_env_vars
+check_env_vars
 
 setup_gcloud
 

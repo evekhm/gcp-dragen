@@ -14,7 +14,11 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${DIR}/setup/init_env_vars.sh"
+bash "$DIR/setup/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
 
 #bash -e "${DIR}/utils/get_configs.sh" | tee -a "$LOG"
 gsutil cp "${START_PIPELINE_FILE}" "${TEST_RUN_DIR}"

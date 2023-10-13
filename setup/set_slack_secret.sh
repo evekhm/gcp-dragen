@@ -1,5 +1,9 @@
-#DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-#source "${DIR}/init_env_vars.sh"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+bash "$DIR/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
 
 SLACK_OAUTH_TOKEN=$1
 

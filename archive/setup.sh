@@ -14,7 +14,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-printf="$DIR/utils/print"
+printf="$DIR/../utils/print"
 LOG="$DIR/setup.log"
 filename=$(basename $0)
 timestamp=$(date +"%m-%d-%Y_%H:%M:%S")
@@ -34,7 +34,7 @@ fi
 
 gcloud config set project $PROJECT_ID
 
-source "${DIR}/setup/init_env_vars.sh"
+source "${DIR}/../setup/init_env_vars.sh"
 
 ### Functions
 function create_secret(){

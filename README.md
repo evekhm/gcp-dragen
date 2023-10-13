@@ -14,7 +14,10 @@
       * [Init and Apply Terraform](#init-and-apply-terraform)
       * [Deploy Cloud Functions and Python Package](#deploy-cloud-functions-and-python-package)
   * [Test Data](#test-data)
+  * [Cross-Project Data Reference](#cross-project-data-reference)
+  * [Slack Integration (Optional)](#slack-integration--optional-)
   * [Demo Flows](#demo-flows)
+    * [Quick Test of a Dry Run](#quick-test-of-a-dry-run)
     * [Smoke Test](#smoke-test)
       * [Trigger the Pipeline](#trigger-the-pipeline)
       * [Check the Job status](#check-the-job-status)
@@ -29,6 +32,7 @@
     * [get_status](#getstatus)
     * [job_scheduler](#jobscheduler)
   * [Pipeline flow](#pipeline-flow)
+  * [BigQuery Sample Scripts](#bigquery-sample-scripts)
   * [Supported DRAGEN versions](#supported-dragen-versions)
   * [References](#references)
   * [Loading batch Job details](#loading-batch-job-details)
@@ -117,11 +121,46 @@ cd illumnia
 
 [//]: # (```)
 
-Run the following commands:
+Set Environment variable to point to the GCP `PROJECT_ID` used for the deployment:
 
 ```shell
-export PROJECT_ID=
+export PROJECT_ID=<your-project-id-here>
+```
+
+Sets the specified Project in your active configuration:
+
+```shell
 gcloud config set project "${PROJECT_ID}" --quiet
+```
+
+You will need a local `setup/.env` file describing  deployment options you want to support.
+In the simplest case, you want to have a single default environment, we call it  `demo`.
+In the real life use case, you want to create test/dev/prod systems and switch between them.
+
+```shell
+sed 's|__ENV__|demo|g;
+      s|__PROJECT_ID__|'"$PROJECT_ID"'|g;
+      ' "setup/.env.sample" > "setup/.env"
+```
+
+Check generated `setup/.env` file:
+
+```shell
+vi setup/.env
+```
+
+If you already have Slack Notification Channel and you want to use Slack integration, fill in SLACK_CHANNEL variable accordingly.
+
+Activate the environment variables:
+
+```shell
+source setup/init_env_vars.sh
+```
+
+If you modify .env file to support multiple environment, each time you want to switch the active environment, you want to run:
+
+```shell
+source setup/init_env_vars.sh <you-env-alias>
 ```
 
 [//]: # (```shell)
@@ -232,7 +271,78 @@ For the Broad (Requires access storage viewer access for the [GCS bucket](https:
   gsutil -m cp -r gs://${SRC_DATA_BUCKET_NAME}/References gs://$DATA_BUCKET_NAME/
   gsutil -m cp -r gs://${SRC_DATA_BUCKET_NAME}/NA12878  gs://$DATA_BUCKET_NAME/
 ```
+
+## Cross-Project Data Reference
+If DRAGEN data is stored in a different project, then additional steps below have to be executed. 
+Two service accounts of the Deployment Project (PROJECT_ID above) need to get access to the bucket of the project containing the input data. 
+
+* Go to the input data bucket that is outside the project DRAGEN is being run from
+* Click on the "Permissions" tab
+* Click" Grant access"
+* Enter `storage-admin@<PROJECT_ID>.iam.gserviceaccount.com`  and `illumina-script-sa@<PROJECT_ID>.iam.gserviceaccount.com` as New principals
+* Select the role `Cloud Storage` > `Storage Access Viewer`
+* Click "Save"
+
+illumina-script-sa@ek-broad-terraform-15.iam.gserviceaccount.com
+illumina-script-sa@ek-broad-terraform-15.iam.gserviceaccount.com
+storage-admin@ek-broad-terraform-15.iam.gserviceaccount.com
+
+## Slack Integration (Optional)
+
+For Slack Integration you need to create Webhook URL:
+* Have a created Workspace and a Slack Channel created
+    * Inside Workspace go to Settings & administration -> Manage Apps
+    * Click on Build (Top Right corner)
+
+    * Go to [Slack Api](https://api.slack.com/) => Your apps (Top right corner):
+        * Create New App => Create New Application from scratch => Give Application Name (Such as `GCP-DRAGEN-notification`)
+        * Add Required scopes and Install Application
+            * Required Bot Token Scope:  `chat:write:bot`
+        * Go to OAuth & Permissions => Copy the Bot User oAuth Token
+            * Go to Scopes -> Bot Token Scopes
+        * OAuth Tokens for Your Workspace
+            * Install to Workspace => Select Notification Channel => Allow
+        * Make sure to add created App into the Channel
+        * Copy created _Bot User OAuth Token_ inside _OAuth Tokens for Your Workspace_
+
+
+Use previously created _Bot User OAuth Token_ to create a secret (Also use this script to update existing Slack Token when needed):
+
+```shell
+export PROJECT_ID=<YOUR-PROJECT-ID>
+source setup/init_env_vars.sh
+```
+
+```shell
+./setup/set_slack_secret.sh <YOUR-BOT-USER-OAUTH-TOKEN>
+```
+```shell
+export SLACK_CHANNEL=<SLACK_CHANNEL>
+```
+
+Test created secret and notification channel:
+
+```shell
+python tests/slack_test.py -m "Your test message"
+```
+
+You should receive the test message in the Slack notification channel.
+When succeeded, proceed with redeploying cloud functions (it will now use the previously set `SLACK_CHANNEL` environment variable to pass into the Cloud Function Variables)
+
+```shell
+setup/deploy_cf.sh
+```
+
 ## Demo Flows
+
+### Quick Test of a Dry Run
+
+Following command submits a sample batch job to trigger the Cloud Functions execution:
+```shell
+./run_test_batch.sh
+```
+
+
 
 ### Smoke Test
 
@@ -284,8 +394,14 @@ Following events for the processing tasks are recorded along with the informatio
 - When the task got into the 'RUNNING' state
 - When the task is completed (either `FAILED` or `SUCCEEDED` state)
 
+
+Try the sample BigQuery scripts:
 ```shell
-sql-scripts/run_query.sh sample NA12878-SmokeTest
+./run_query.sh -n <QUERY_NAME> [ -s <sample_id>] [-l <job-label>] [-a <after-equals-this-time>]  [-b <before-equals-this-time>]
+```
+
+```shell
+sql-scripts/run_query.sh -n sample -s NA12878-SmokeTest
 ```
 
 Sample Output:
@@ -326,7 +442,7 @@ Check the BigQuery Table by navigate to [BigQuery](https://console.cloud.google.
 
 Following Query will show NA0 test Sample detailed status info associated with the new Job:
 ```shell
-sql-scripts/run_query.sh sample NA0
+sql-scripts/run_query.sh -n sample -s NA0
 ```
 
 ### Dry Run - a list of Jobs
@@ -361,7 +477,7 @@ Do the sample quires:
 Summary of the samples with counts per status:
 
 ```shell
-sql-scripts/run_query.sh count
+sql-scripts/run_query.sh -n count
 ```
 
 VERIFIED_OK - means the Log File was analyzed and magic "DRAGEN finished normally" statement was found in there.
@@ -378,7 +494,7 @@ VERIFIED_FAILED - Log Entry with "DRAGEN finished normally" entry was not detect
 - Detailed summary of samples with the latest statuses:
 
 ```shell
-sql-scripts/run_query.sh samples
+sql-scripts/run_query.sh -n samples
 ```
 
 ```text
@@ -415,7 +531,7 @@ sql-scripts/run_query.sh samples
 - Detailed info per sample:
 
 ```shell
-sql-scripts/run_query.sh sample NA3
+sql-scripts/run_query.sh -n sample -s NA3
 ```
 
 ```text
@@ -511,7 +627,6 @@ Using GCP Console, go to the Batch list and wait for the first job to get Runnin
 
 Run queries as listed above to see data ingested into the BigQuery.
 
-
 ## Cloud Functions
 
 There are three Cloud Functions: `run_dragen_job`, `get_status` and `job_scheduler`.
@@ -545,11 +660,11 @@ Is triggered when `START_PIPELINE` file is uploaded into the GCS `$PROJECT_ID-tr
 
 - If `jobs.csv` file was not detected, parses the content of the `START_PIPELINE` file:
   - In case if `START_PIPELINE` file is empty, for the configuration uses `batch_config.json` file name.
-  - Otherwise, tries to parse `START_PIPLEINE` as json and extracts `config` (as a name to be used instead of the default `batch_config.json`) and `dragen-job` (to be used a Job label) parameters.
+  - Otherwise, tries to parse `START_PIPLEINE` as json and extracts `config` (as a name to be used instead of the default `batch_config.json`) and `dragen-job` (to be used a _Job label_) parameters.
   - Looks for the `batch_config.json` or for the name as specified under `config` in `START_PIPELINE` inside the triggered directory.
   - Calls batch API and passes information as specified in the detected configuration file.
-  - Saves information about CREATED tasks into the BigQuery `$PROJECT_ID.dragen_illumina.tasks_status` table.
-  - generates `gs://$PROJECT_ID-output/jobs_created/<job_id>.csv` with all tasks information for further reference and usage by the `get_status` Cloud Function.
+  - Saves information about CREATED Job along with the variables and Array indexes into the BigQuery `$PROJECT_ID.dragen_illumina.job_array` table.
+
 
 ### get_status
 
@@ -558,10 +673,10 @@ Is triggered when `START_PIPELINE` file is uploaded into the GCS `$PROJECT_ID-tr
 - is subscribed to the `Topic: job-dragen-task-state-change-topic` and saves information about the task (plus combines with information from the `job_id.csv`) into the BigQuery.
 
 - Receives Pub/Sub notification about Batch Task State Change (with `JobUID`,`NewTaskState`, `TaskUID`) using `job-dragen-task-state-change-topic` topic.
-- Using JobUID/TaskUID tries to get additional task information from the `gs://$PROJECT_ID-output/jobs_created/<job_id>.csv` (Can also parse Log file generated by the task when csv file is not detected)
+- Using JobUID/TaskUID tries to get additional task information from the `$PROJECT_ID.dragen_illumina.job_array`
 - Saves information about the task Status and task additional information for the reference inside the BigQuery `$PROJECT_ID.dragen_illumina.tasks_status` table.
+- When enabled integration with Slack, sends information to the Slack notification channel.
 
-tries to get <job_id>.csv file and get additional information about task (which samples, input_path, output_path).
 
 <br>
 
@@ -614,9 +729,145 @@ Sample scripts to trigger for execution (to be run from the Cloud Shell):
 - ./run_fastq_403.sh - to trigger fastq 4.03 execution (using `$PROJECT_ID-trigger/fastq_test/batch_config.json`)
 - ./run_cram_378.sh - to trigger 3.78 execution for cram sample (using `$PROJECT_ID-trigger/cram_test/378/batch_config.json`)
 - ./run_test_batch.sh - to trigger 3.78 dry run sample test (okay 20 samples)
-- ./run_test_batch.sh fail - to trigger 3.78 dry run sample test (fail 2 samples)
-- ./run_test_batch.sh pass - to trigger 3.78 dry run sample test (pass 2 samples, verified_fail)
+- ./run_test_batch.sh fail - to trigger 3.78 dry run sample test (fail )
+- ./run_test_batch.sh pass - to trigger 3.78 dry run sample test (pass, verified_fail)
 
+
+##  BigQuery Sample Scripts
+
+There are sample BigQuery scripts to help understanding the progress and status of the Dragen processing job.
+
+To see help and available options:
+
+```shell
+sql-scripts/run_query.sh
+```
+
+Output:
+```text
+ Usage: ./run_query.sh -n <QUERY_NAME> [ -s <sample_id>] [-l <job-label>] [-a <task_created_after-this-time>]  [-b <task_created_before-this-time>] 
+ QUERY_NAMEs:
+     - count   - Summary of the samples with counts per status 
+     - samples - Detailed summary of samples with the latest statuses
+     - sample  - Detailed summary with all statuses (usually done per sample)
+ Example: 
+      sql-scripts/run_query.sh -n sample -s NA21 -l job1 -a 2023-10-07T03:23:10
+
+```
+
+Note, time based filtering is happening based on the time stamp when Job/Tasks have been created (and not on the timestamp of the status updates).
+When Job/Tasks are submitted by the GCP batch, a record is created inside `dragen_illumina.job_array` Table.
+All Task Status updates are saved into `dragen_illumina.task_status` Table with corresponding timestamps.
+Here is an example:
+```shell
+sql-scripts/run_query.sh -n samples
+```
+```text
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+|       job_name        |     job_label     | batch_index | sample_id |     status      |           input_path        |                  output_path                             | input_type |  last_status_time   |    creation_time    |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+| job-dragen-78a8a3c556 | batch_config_fail |           0 | NA22      | FAILED          | s3://ek-data/NA22/NA22.cram | s3://ek-output/3_78/aggregation/NA22/2023-10-11-00-12-33 | cram       | 2023-10-11T00:14:58 | 2023-10-11T00:12:33 |
+| job-dragen-8f4e4d2301 | job2              |           0 | NA22      | FAILED          | s3://ek-data/NA22/NA22.cram | s3://ek-output/3_78/aggregation/NA22/2023-10-07-03-23-19 | cram       | 2023-10-07T03:25:30 | 2023-10-07T03:23:20 |
+| job-dragen-5b6bc6242f | job1              |           0 | NA20      | VERIFIED_FAILED | s3://ek-data/NA20/NA20.cram | s3://ek-output/3_78/aggregation/NA20/2023-10-07-03-21-02 | cram       | 2023-10-07T03:23:16 | 2023-10-07T03:21:02 |
+| job-dragen-0fdc832b76 | batch_config_pass |           0 | NA20      | VERIFIED_FAILED | s3://ek-data/NA20/NA20.cram | s3://ek-output/3_78/aggregation/NA20/2023-10-11-18-33-10 | cram       | 2023-10-11T18:35:36 | 2023-10-11T18:33:11 |
+| job-dragen-5b6bc6242f | job1              |           1 | NA21      | VERIFIED_FAILED | s3://ek-data/NA21/NA21.cram | s3://ek-output/3_78/aggregation/NA21/2023-10-07-03-21-02 | cram       | 2023-10-07T03:23:10 | 2023-10-07T03:21:02 |
+| job-dragen-0fdc832b76 | batch_config_pass |           1 | NA21      | VERIFIED_FAILED | s3://ek-data/NA21/NA21.cram | s3://ek-output/3_78/aggregation/NA21/2023-10-11-18-33-10 | cram       | 2023-10-11T18:35:37 | 2023-10-11T18:33:12 |
+| job-dragen-ea0bbb5de2 | job0              |           0 | NA0       | VERIFIED_OK     | s3://ek-data/NA0/NA0.cram   | s3://ek-output/3_78/aggregation/NA0/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:21 | 2023-10-07T03:18:29 |
+| job-dragen-ea0bbb5de2 | job0              |           1 | NA1       | VERIFIED_OK     | s3://ek-data/NA1/NA1.cram   | s3://ek-output/3_78/aggregation/NA1/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           2 | NA2       | VERIFIED_OK     | s3://ek-data/NA2/NA2.cram   | s3://ek-output/3_78/aggregation/NA2/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           3 | NA3       | VERIFIED_OK     | s3://ek-data/NA3/NA3.cram   | s3://ek-output/3_78/aggregation/NA3/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           4 | NA4       | VERIFIED_OK     | s3://ek-data/NA4/NA4.cram   | s3://ek-output/3_78/aggregation/NA4/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:07 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           5 | NA5       | VERIFIED_OK     | s3://ek-data/NA5/NA5.cram   | s3://ek-output/3_78/aggregation/NA5/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           6 | NA6       | VERIFIED_OK     | s3://ek-data/NA6/NA6.cram   | s3://ek-output/3_78/aggregation/NA6/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:21 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           7 | NA7       | VERIFIED_OK     | s3://ek-data/NA7/NA7.cram   | s3://ek-output/3_78/aggregation/NA7/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:08 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           8 | NA8       | VERIFIED_OK     | s3://ek-data/NA8/NA8.cram   | s3://ek-output/3_78/aggregation/NA8/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:07 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |           9 | NA9       | VERIFIED_OK     | s3://ek-data/NA9/NA9.cram   | s3://ek-output/3_78/aggregation/NA9/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          10 | NA10      | VERIFIED_OK     | s3://ek-data/NA10/NA10.cram | s3://ek-output/3_78/aggregation/NA10/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          11 | NA11      | VERIFIED_OK     | s3://ek-data/NA11/NA11.cram | s3://ek-output/3_78/aggregation/NA11/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:03 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          12 | NA12      | VERIFIED_OK     | s3://ek-data/NA12/NA12.cram | s3://ek-output/3_78/aggregation/NA12/2023-10-07-03-18-29 | cram       | 2023-10-07T03:21:01 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          13 | NA13      | VERIFIED_OK     | s3://ek-data/NA13/NA13.cram | s3://ek-output/3_78/aggregation/NA13/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:24 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          14 | NA14      | VERIFIED_OK     | s3://ek-data/NA14/NA14.cram | s3://ek-output/3_78/aggregation/NA14/2023-10-07-03-18-29 | cram       | 2023-10-07T03:21:01 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          15 | NA15      | VERIFIED_OK     | s3://ek-data/NA15/NA15.cram | s3://ek-output/3_78/aggregation/NA15/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:41 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          16 | NA16      | VERIFIED_OK     | s3://ek-data/NA16/NA16.cram | s3://ek-output/3_78/aggregation/NA16/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:24 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          17 | NA17      | VERIFIED_OK     | s3://ek-data/NA17/NA17.cram | s3://ek-output/3_78/aggregation/NA17/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:44 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          18 | NA18      | VERIFIED_OK     | s3://ek-data/NA18/NA18.cram | s3://ek-output/3_78/aggregation/NA18/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:41 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          19 | NA19      | VERIFIED_OK     | s3://ek-data/NA19/NA19.cram | s3://ek-output/3_78/aggregation/NA19/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:47 | 2023-10-07T03:18:31 |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+```
+
+Filtering on job_label:
+
+```shell
+sql-scripts/run_query.sh -n samples -l job0
+```
+
+Output:
+```text
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+|       job_name        |     job_label     | batch_index | sample_id |     status      |           input_path        |                  output_path                             | input_type |  last_status_time   |    creation_time    |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+| job-dragen-ea0bbb5de2 | job0              |           0 | NA0       | VERIFIED_OK     | s3://ek-data/NA0/NA0.cram   | s3://ek-output/3_78/aggregation/NA0/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:21 | 2023-10-07T03:18:29 |
+| job-dragen-ea0bbb5de2 | job0              |           1 | NA1       | VERIFIED_OK     | s3://ek-data/NA1/NA1.cram   | s3://ek-output/3_78/aggregation/NA1/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           2 | NA2       | VERIFIED_OK     | s3://ek-data/NA2/NA2.cram   | s3://ek-output/3_78/aggregation/NA2/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           3 | NA3       | VERIFIED_OK     | s3://ek-data/NA3/NA3.cram   | s3://ek-output/3_78/aggregation/NA3/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           4 | NA4       | VERIFIED_OK     | s3://ek-data/NA4/NA4.cram   | s3://ek-output/3_78/aggregation/NA4/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:07 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           5 | NA5       | VERIFIED_OK     | s3://ek-data/NA5/NA5.cram   | s3://ek-output/3_78/aggregation/NA5/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           6 | NA6       | VERIFIED_OK     | s3://ek-data/NA6/NA6.cram   | s3://ek-output/3_78/aggregation/NA6/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:21 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           7 | NA7       | VERIFIED_OK     | s3://ek-data/NA7/NA7.cram   | s3://ek-output/3_78/aggregation/NA7/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:08 | 2023-10-07T03:18:30 |
+| job-dragen-ea0bbb5de2 | job0              |           8 | NA8       | VERIFIED_OK     | s3://ek-data/NA8/NA8.cram   | s3://ek-output/3_78/aggregation/NA8/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:07 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |           9 | NA9       | VERIFIED_OK     | s3://ek-data/NA9/NA9.cram   | s3://ek-output/3_78/aggregation/NA9/2023-10-07-03-18-29  | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          10 | NA10      | VERIFIED_OK     | s3://ek-data/NA10/NA10.cram | s3://ek-output/3_78/aggregation/NA10/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:06 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          11 | NA11      | VERIFIED_OK     | s3://ek-data/NA11/NA11.cram | s3://ek-output/3_78/aggregation/NA11/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:03 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          12 | NA12      | VERIFIED_OK     | s3://ek-data/NA12/NA12.cram | s3://ek-output/3_78/aggregation/NA12/2023-10-07-03-18-29 | cram       | 2023-10-07T03:21:01 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          13 | NA13      | VERIFIED_OK     | s3://ek-data/NA13/NA13.cram | s3://ek-output/3_78/aggregation/NA13/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:24 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          14 | NA14      | VERIFIED_OK     | s3://ek-data/NA14/NA14.cram | s3://ek-output/3_78/aggregation/NA14/2023-10-07-03-18-29 | cram       | 2023-10-07T03:21:01 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          15 | NA15      | VERIFIED_OK     | s3://ek-data/NA15/NA15.cram | s3://ek-output/3_78/aggregation/NA15/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:41 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          16 | NA16      | VERIFIED_OK     | s3://ek-data/NA16/NA16.cram | s3://ek-output/3_78/aggregation/NA16/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:24 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          17 | NA17      | VERIFIED_OK     | s3://ek-data/NA17/NA17.cram | s3://ek-output/3_78/aggregation/NA17/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:44 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          18 | NA18      | VERIFIED_OK     | s3://ek-data/NA18/NA18.cram | s3://ek-output/3_78/aggregation/NA18/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:41 | 2023-10-07T03:18:31 |
+| job-dragen-ea0bbb5de2 | job0              |          19 | NA19      | VERIFIED_OK     | s3://ek-data/NA19/NA19.cram | s3://ek-output/3_78/aggregation/NA19/2023-10-07-03-18-29 | cram       | 2023-10-07T03:20:47 | 2023-10-07T03:18:31 |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+```
+
+Filtering on job creation time (all filters could be combined at the same time):
+
+```shell
+sql-scripts/run_query.sh -n samples  -a 2023-10-10T23:36:10
+```
+
+
+Output:
+```text
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+|       job_name        |     job_label     | batch_index | sample_id |     status      |           input_path        |                  output_path                             | input_type |  last_status_time   |    creation_time    |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+| job-dragen-78a8a3c556 | batch_config_fail |           0 | NA22      | FAILED          | s3://ek-data/NA22/NA22.cram | s3://ek-output/3_78/aggregation/NA22/2023-10-11-00-12-33 | cram       | 2023-10-11T00:14:58 | 2023-10-11T00:12:33 |
+| job-dragen-0fdc832b76 | batch_config_pass |           0 | NA20      | VERIFIED_FAILED | s3://ek-data/NA20/NA20.cram | s3://ek-output/3_78/aggregation/NA20/2023-10-11-18-33-10 | cram       | 2023-10-11T18:35:36 | 2023-10-11T18:33:11 |
+| job-dragen-0fdc832b76 | batch_config_pass |           1 | NA21      | VERIFIED_FAILED | s3://ek-data/NA21/NA21.cram | s3://ek-output/3_78/aggregation/NA21/2023-10-11-18-33-10 | cram       | 2023-10-11T18:35:37 | 2023-10-11T18:33:12 |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+```
+
+Filters could be combined:
+```shell
+sql-scripts/run_query.sh -n samples -a 2023-10-10T23:36:10 -l batch_config_fail
+```
+
+Output:
+```text
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+|       job_name        |     job_label     | batch_index | sample_id |     status      |           input_path        |                  output_path                             | input_type |  last_status_time   |    creation_time    |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+| job-dragen-78a8a3c556 | batch_config_fail |           0 | NA22      | FAILED          | s3://ek-data/NA22/NA22.cram | s3://ek-output/3_78/aggregation/NA22/2023-10-11-00-12-33 | cram       | 2023-10-11T00:14:58 | 2023-10-11T00:12:33 |
++-----------------------+-------------------+-------------+-----------+-----------------+------------------------------------------------+-----------------------------------------------------------------------------+------------+---------------------+---------------------+
+```
+
+```text
++-------+---------+-----------+--------+-------------+-----------------+
+| TOTAL | RUNNING | SUCCEEDED | FAILED | VERIFIED_OK | VERIFIED_FAILED |
++-------+---------+-----------+--------+-------------+-----------------+
+|     4 |       0 |         4 |      0 |           4 |               0 |
++-------+---------+-----------+--------+-------------+-----------------+
+```
 
 
 ## Supported DRAGEN versions
@@ -638,52 +889,6 @@ Following dragen `VERSION`(s) are supported:
 * `illumina-dragen_3_10_4n_7_g93fc1329`
 
 * `illumina-dragen_3_7_8n`
-
-## Slack Integration
-
-For Slack Integration you need to create Webhook URL:
-* Have a created Workspace and a Slack Channel created
-  * Inside Workspace go to Settings & administration -> Manage Apps
-  * Click on Build (Top Right corner) 
-
-  * Go to [Slack Api](https://api.slack.com/) => Your apps (Top right corner):
-    * Create New App => Create New Application from scratch => Give Application Name (Such as `GCP-DRAGEN-notification`)
-    * Add Required scopes and Install Application
-      * Required Bot Token Scope:  `chat:write:bot`
-    * Go to OAuth & Permissions => Copy the Bot User oAuth Token 
-      * Go to Scopes -> Bot Token Scopes
-    * OAuth Tokens for Your Workspace
-      * Install to Workspace => Select Notification Channel => Allow
-    * Make sure to add created App into the Channel
-    * Copy created _Bot User OAuth Token_ inside _OAuth Tokens for Your Workspace_
-
-
-Use previously created _Bot User OAuth Token_ to create a secret (Also use this script to update existing Slack Token when needed):
-
-```shell
-export PROJECT_ID=<YOUR-PROJECT-ID>
-source setup/init_env_vars.sh
-```
-
-```shell
-./setup/set_slack_secret.sh <YOUR-BOT-USER-OAUTH-TOKEN>
-```
-```shell
-export SLACK_CHANNEL=<SLACK_CHANNEL>
-```
-
-Test created secret and notification channel:
-
-```shell
-python tests/slack_test.py -m "Your test message"
-```
-
-You should receive the test message in the Slack notification channel. 
-When succeeded, proceed with redeploying cloud functions (it will now use the previously set `SLACK_CHANNEL` environment variable to pass into the Cloud Function Variables)
-
-```shell
-setup/deploy_cf.sh
-```
 
 ## References
 

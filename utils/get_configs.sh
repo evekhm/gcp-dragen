@@ -15,7 +15,11 @@
 
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 printf="$WDIR/print"
-source "${WDIR}/../setup/init_env_vars.sh"
+bash "$WDIR/../setup/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
 
 $printf "Setting up Job Configuration files ..."
 function substitute(){
@@ -35,7 +39,6 @@ function substitute(){
       s|__IN_BUCKET__|'"$INPUT_BUCKET_NAME"'|g;
       s|__CONFIG_BUCKET__|'"$CONFIG_BUCKET_NAME"'|g;
       s|__DATA_BUCKET__|'"$DATA_BUCKET_NAME"'|g;
-      s|__JOBS_INFO_PATH__|'"$JOBS_INFO_PATH"'|g;
       ' "${INPUT_FILE}" > "${OUTPUT_FILE}"
 }
 

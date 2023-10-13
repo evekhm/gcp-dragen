@@ -14,8 +14,11 @@
 # limitations under the License.
 
 WDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "${WDIR}/init_env_vars.sh" > /dev/null 2>&1
-
+bash "$WDIR/check_setup.sh"
+retVal=$?
+if [ $retVal -eq 2 ]; then
+  exit 2
+fi
 
 declare -a EnvVars=(
   "PROJECT_ID"
