@@ -110,17 +110,6 @@ Following Google APIs will be used by the Project:
 git clone git@github.com:evekhm/illumnia.git  
 cd illumnia
 ```
-
-[//]: # (```shell)
-
-[//]: # (gcloud source repos clone evekhm-broad-dragen --project=cloud-ce-shared-csr)
-
-[//]: # (cd evekhm-broad-dragen)
-
-[//]: # (git checkout main)
-
-[//]: # (```)
-
 Set Environment variable to point to the GCP `PROJECT_ID` used for the deployment:
 
 ```shell
@@ -282,10 +271,6 @@ Two service accounts of the Deployment Project (PROJECT_ID above) need to get ac
 * Enter `storage-admin@<PROJECT_ID>.iam.gserviceaccount.com`  and `illumina-script-sa@<PROJECT_ID>.iam.gserviceaccount.com` as New principals
 * Select the role `Cloud Storage` > `Storage Access Viewer`
 * Click "Save"
-
-illumina-script-sa@ek-broad-terraform-15.iam.gserviceaccount.com
-illumina-script-sa@ek-broad-terraform-15.iam.gserviceaccount.com
-storage-admin@ek-broad-terraform-15.iam.gserviceaccount.com
 
 ## Slack Integration (Optional)
 

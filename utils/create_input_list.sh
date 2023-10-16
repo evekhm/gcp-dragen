@@ -52,7 +52,7 @@ fi
 
 echo "Generating $START_COUNT-$END_COUNT test samples into $OUTPUT file ..."
 # collaborator_sample_id	cram_file_ref
-#NA12878-SmokeTest	s3://ek-broad-gp-dragen-demo/NA12878/NA12878.cram
+#NA12878-SmokeTest	s3://DATA_BUCKET_NAME/NA12878/NA12878.cram
 
 echo "collaborator_sample_id	cram_file_ref" > ${LOCAL_PATH}
 counter=$START_COUNT

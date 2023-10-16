@@ -3,9 +3,9 @@ import sys
 import argparse
 sys.path.append(os.path.join(os.path.dirname(__file__), '../common/src'))
 
-os.environ["PROJECT_ID"] = "ek-broad-terraform-14"
-# The channel id of the channel you want to send the message to
-os.environ["SLACK_CHANNEL"] = "#dragen-illumina-gcp-batch"
+# os.environ["PROJECT_ID"] = "YOUR_PROJECT_ID_HERE"
+# # The channel id of the channel you want to send the message to
+# os.environ["SLACK_CHANNEL"] = "YOUR_CHANNEL_ID_HERE"
 
 from commonek.slack import Slack
 from commonek.params import SLACK_API_TOKEN_SECRET_NAME, PROJECT_ID
@@ -50,11 +50,9 @@ if __name__ == "__main__":
         channel_id = os.getenv("SLACK_CHANNEL")
 
     if not channel_id:
-        print(f"Please, either set env variable SLACK_CHANNEL to point to the Slack channel, "
-              f"or provide channel as a parameter into the Python function using option `-c`")
+        print("Please, either set env variable SLACK_CHANNEL to point to the Slack channel, "
+              "or provide channel as a parameter into the Python function using option `-c`")
     else:
         print(f"Testing Slack message using channel={channel_id} and message={args.message} and "
               f"secret token of {SLACK_API_TOKEN_SECRET_NAME} inside project={PROJECT_ID}")
         slack_test.chat_post_message(channel=channel_id, text=args.message)
-
-

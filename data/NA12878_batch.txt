@@ -1,2 +1,0 @@
-collaborator_sample_id	cram_file_ref
-NA12878-SmokeTest	s3://ek-broad-gp-dragen-demo/NA12878/NA12878.cram
