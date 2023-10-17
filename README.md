@@ -105,12 +105,9 @@ Following Google APIs will be used by the Project:
 > It is recommended to start with a brand new Google Cloud project to have a clean start.
 
 - Create GCP Project with attached Billing Account
-- Clone this Repository using Cloud Shell:
-```shell
-git clone git@github.com:evekhm/illumnia.git  
-cd illumnia
-```
-Set Environment variable to point to the GCP `PROJECT_ID` used for the deployment:
+- Clone this Repository using Cloud Shell
+
+- Set Environment variable to point to the GCP `PROJECT_ID` used for the deployment:
 
 ```shell
 export PROJECT_ID=<your-project-id-here>
@@ -128,7 +125,7 @@ In the real life use case, you want to create test/dev/prod systems and switch b
 Command below generates .env file for the single _demo_ environment:
 
 ```shell
-setup/create_env_file.sh demo
+bash setup/create_env_file.sh demo
 ```
 
 Check generated `setup/.env` file:
@@ -142,7 +139,7 @@ If you already have Slack Notification Channel and you want to use Slack integra
 Activate the environment variables:
 
 ```shell
-source setup/init_env_vars.sh
+source setup/init_env_vars.sh demo
 ```
 
 If you modify .env file to support multiple environment, each time you want to switch the active environment, you want to run:
