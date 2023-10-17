@@ -125,11 +125,10 @@ gcloud config set project "${PROJECT_ID}" --quiet
 You will need a local `setup/.env` file describing  deployment options you want to support.
 In the simplest case, you want to have a single default environment, we call it  `demo`.
 In the real life use case, you want to create test/dev/prod systems and switch between them.
+Command below generates .env file for the single _demo_ environment:
 
 ```shell
-sed 's|__ENV__|demo|g;
-      s|__PROJECT_ID__|'"$PROJECT_ID"'|g;
-      ' "setup/.env.sample" > "setup/.env"
+setup/create_env_file.sh demo
 ```
 
 Check generated `setup/.env` file:
@@ -158,13 +157,10 @@ source setup/init_env_vars.sh <you-env-alias>
 
 [//]: # (gcloud services enable cloudresourcemanager.googleapis.com)
 
-[//]: # ()
 [//]: # (# for Terraform to able to run gcloud with correct config.)
 
 [//]: # (gcloud auth login)
-
 [//]: # (gcloud auth application-default login )
-
 [//]: # (gcloud auth application-default set-quota-project $PROJECT_ID)
 
 [//]: # (```)
@@ -379,7 +375,11 @@ Following events for the processing tasks are recorded along with the informatio
 - When the task got into the 'RUNNING' state
 - When the task is completed (either `FAILED` or `SUCCEEDED` state)
 
+Activate the previously created environment (demo in out case):
 
+```shell
+source setup/init_env_vars.sh demo
+```
 Try the sample BigQuery scripts:
 ```shell
 ./run_query.sh -n <QUERY_NAME> [ -s <sample_id>] [-l <job-label>] [-a <after-equals-this-time>]  [-b <before-equals-this-time>]
